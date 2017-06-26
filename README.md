@@ -42,6 +42,21 @@ $ pip install regexy
 
 ## Usage
 
+Notice `regexy` returns all capturing groups specified within a repeated sub-expression
+
+```python
+import regexy
+
+regexy.match(regexy.compile(r'((a)*b)'), 'aab')
+# ('aab', ('a', 'a')
+
+regexy.match(regexy.compile(r'a'), 'b')
+# None
+
+regexy.match(regexy.compile(r'a'), 'a')
+# ()
+```
+
 
 # Docs
 
