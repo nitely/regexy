@@ -17,16 +17,16 @@ Mostly based on Thompson's NFA.
 
 ## Status
 
-[x] Matcher
-[x] Basic operators: `*` and `|`
-[x] Groups capturing
-[] Missing basic operators: `?`, `+`
-[] Symbols escaping
-[] Shorthands: `\w` and `\d`
-[] Sets `[...]`
-[] Char ranges
-[] Repetition ranges `{n, m}`
-[] ... ?
+- [x] Matcher
+- [x] Basic operators: `*` and `|`
+- [x] Groups capturing
+- [ ] Missing basic operators: `?`, `+`
+- [ ] Symbols escaping
+- [ ] Shorthands: `\w` and `\d`
+- [ ] Sets `[...]`
+- [ ] Char ranges
+- [ ] Repetition ranges `{n, m}`
+- [ ] ... ?
 
 ## Compatibility
 
