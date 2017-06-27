@@ -72,6 +72,12 @@ def nfa(nodes):
             states.append(state)
             continue
 
+        if node.char == Symbols.ZERO_OR_ONE:
+            state = states.pop()
+            node.out = [state, EOF]
+            states.append(node)
+            continue
+
         if node.char == Symbols.GROUP_START:
             state = states.pop()
             node.out = [state]

@@ -51,6 +51,9 @@ class ReactTest(unittest.TestCase):
             match('((a(b)*)*(b)*)', 'abbb'),
             ('abbb', ('abbb',), ('b', 'b', 'b'), None))
         self.assertEqual(match('(a)+', 'aa'), (('a', 'a'),))
+        self.assertEqual(match('(ab)+', 'abab'), (('ab', 'ab'),))
+        self.assertEqual(match('(a)?', 'a'), ('a',))
+        self.assertEqual(match('(ab)?', 'ab'), ('ab',))
 
     def test_to_atoms(self):
         self.assertEqual(to_atoms('a(b|c)*d'), 'a~(b|c)*~d')
@@ -68,3 +71,14 @@ class ReactTest(unittest.TestCase):
         self.assertIsNone(match('a+', ''))
         self.assertIsNone(match('a+', 'b'))
         self.assertIsNone(match('ab+', 'aab'))
+
+    def test_zero_or_one_op(self):
+        self.assertIsNotNone(match('a?', 'a'))
+        self.assertIsNotNone(match('a?', ''))
+        self.assertIsNotNone(match('ab?', 'a'))
+        self.assertIsNotNone(match('ab?', 'ab'))
+        self.assertIsNotNone(match('ab?a', 'aba'))
+        self.assertIsNotNone(match('ab?a', 'aa'))
+        self.assertIsNone(match('a?', 'aa'))
+        self.assertIsNone(match('a?', 'b'))
+        self.assertIsNone(match('ab?', 'abb'))
