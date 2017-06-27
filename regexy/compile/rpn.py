@@ -18,6 +18,9 @@ _Op = collections.namedtuple('Op', (
     'associativity'))
 
 OPS = {
+    Symbols.ONE_OR_MORE: _Op(
+        precedence=5,
+        associativity=Associativity.RIGHT),
     Symbols.ZERO_OR_MORE: _Op(
         precedence=5,
         associativity=Associativity.RIGHT),
