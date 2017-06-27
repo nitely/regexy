@@ -13,7 +13,7 @@ __all__ = [
     'join_atoms']
 
 
-NODES = {
+SYMBOLS = {
     Symbols.JOINER: OpNode,
     Symbols.ZERO_OR_MORE: OpNode,
     Symbols.ZERO_OR_ONE: OpNode,
@@ -23,20 +23,25 @@ NODES = {
     Symbols.GROUP_END: GroupNode}
 
 
+SHORTHANDS = {
+    'w': None,  # class AlphaNumNode(ShorthandNode), class ShorthandNode(CharNode)
+}
+
+
 def _parse(expression):
     escape = False
 
     for char in expression:
         if escape:
             escape = False
-            yield CharNode(char=char)
+            yield SHORTHANDS.get(char, CharNode)(char=char)
             continue
 
         if char == '\\':
             escape = True
             continue
 
-        yield NODES.get(char, CharNode)(char=char)
+        yield SYMBOLS.get(char, CharNode)(char=char)
 
 
 def parse(expression):
