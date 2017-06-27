@@ -63,6 +63,9 @@ class ReactTest(unittest.TestCase):
         self.assertEqual(to_atoms('a*b'), 'a*~b')
         self.assertEqual(to_atoms('(a)b'), '(a)~b')
         self.assertEqual(to_atoms('(a)(b)'), '(a)~(b)')
+        self.assertEqual(to_atoms(r'\a'), 'a')
+        self.assertEqual(to_atoms(r'a\*b'), 'a~*~b')
+        self.assertEqual(to_atoms(r'\(a\)'), '(~a~)')
 
     def test_one_or_more_op(self):
         self.assertIsNotNone(match('a+', 'aaaa'))
@@ -82,3 +85,11 @@ class ReactTest(unittest.TestCase):
         self.assertIsNone(match('a?', 'aa'))
         self.assertIsNone(match('a?', 'b'))
         self.assertIsNone(match('ab?', 'abb'))
+
+    def test_escape(self):
+        self.assertEqual(match(r'\(a\)', '(a)'), ())
+        self.assertEqual(match(r'a\*b', 'a*b'), ())
+        self.assertEqual(match(r'a\*b*', 'a*bbb'), ())
+        self.assertEqual(match(r'\a', 'a'), ())
+        self.assertEqual(match(r'\\', '\\'), ())
+        self.assertEqual(match(r'\\\\', '\\\\'), ())

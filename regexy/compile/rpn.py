@@ -2,7 +2,9 @@
 
 import collections
 
-from ..shared import Symbols
+from ..shared import (
+    Symbols,
+    CharNode)
 
 
 __all__ = ['rpn']
@@ -82,6 +84,10 @@ def rpn(nodes):
     operators = []
 
     for node in nodes:
+        if isinstance(node, CharNode):
+            yield node
+            continue
+
         if node.char == Symbols.GROUP_START:
             operators.append(node)
             continue
@@ -96,6 +102,6 @@ def rpn(nodes):
             operators.append(node)
             continue
 
-        yield node
+        raise ValueError('Unhandled node: %s' % repr(node))
 
     yield from reversed(operators)
