@@ -23,10 +23,24 @@ NODES = {
     Symbols.GROUP_END: GroupNode}
 
 
+def _parse(expression):
+    escape = False
+
+    for char in expression:
+        if escape:
+            escape = False
+            yield CharNode(char=char)
+            continue
+
+        if char == '\\':
+            escape = True
+            continue
+
+        yield NODES.get(char, CharNode)(char=char)
+
+
 def parse(expression):
-    return [
-        NODES.get(char, CharNode)(char=char)
-        for char in expression]
+    return list(_parse(expression))
 
 
 def fill_groups(nodes):
@@ -34,8 +48,8 @@ def fill_groups(nodes):
     groups = []
 
     for index, node in enumerate(nodes):
-        if isinstance(node, CharNode) and groups:
-            node.is_captured = True
+        if isinstance(node, CharNode):
+            node.is_captured = bool(groups)
             continue
 
         if node.char == Symbols.GROUP_START:
