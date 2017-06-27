@@ -18,9 +18,8 @@ Mostly based on Thompson's NFA.
 ## Status
 
 - [x] Matcher
-- [x] Basic operators: `*` and `|`
-- [x] Groups capturing
-- [ ] Missing basic operators: `?`, `+`
+- [x] Basic operators: `*`, `?`, `+` and `|`
+- [x] Capturing groups
 - [ ] Symbols escaping
 - [ ] Shorthands: `\w` and `\d`
 - [ ] Sets `[...]`
