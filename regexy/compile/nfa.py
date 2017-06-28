@@ -2,6 +2,8 @@
 
 """
 Tools for creating the NFA states
+
+:private:
 """
 
 from typing import Iterator
@@ -54,7 +56,7 @@ def nfa(nodes: Iterator[Node]) -> Node:
     ready to be matched against a string
 
     This creates the connections for every node.\
-    EOF is temporary placed on latest created state\
+    EOF is temporarily placed on latest created state ends\
     and replaced by a connection to other node later,\
     so leaf nodes are the only nodes containing an EOF\
     in the resulting NFA
@@ -62,6 +64,7 @@ def nfa(nodes: Iterator[Node]) -> Node:
     :param nodes: an iterator of nodes\
     to be converted into a NFA
     :return: the NFA first state/node
+    :private:
     """
     states = []
 
