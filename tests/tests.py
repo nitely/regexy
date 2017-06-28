@@ -37,6 +37,11 @@ class ReactTest(unittest.TestCase):
         self.assertIsNone(match('a(b|c)*d', 'ab'))
         self.assertIsNone(match('b', 'a'))
 
+    def test_repetition_cycle(self):
+        self.assertIsNotNone(match('a**', 'aaa'))
+        self.assertIsNotNone(match('(a*)*', 'aaa'))
+        self.assertIsNotNone(match('((a*|b*))*', 'aaabbbaaa'))
+
     def test_captures(self):
         self.assertEqual(match('(a)b', 'ab'), ('a',))
         self.assertEqual(match('(a)*', 'aa'), (('a', 'a'),))
@@ -54,6 +59,9 @@ class ReactTest(unittest.TestCase):
         self.assertEqual(match('(ab)+', 'abab'), (('ab', 'ab'),))
         self.assertEqual(match('(a)?', 'a'), ('a',))
         self.assertEqual(match('(ab)?', 'ab'), ('ab',))
+        self.assertEqual(
+            match('(a*|b*)*', 'aaabbbaaa'),
+            (('aaa', 'bbb', 'aaa'),))
 
     def test_to_atoms(self):
         self.assertEqual(to_atoms('a(b|c)*d'), 'a~(b|c)*~d')

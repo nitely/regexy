@@ -10,7 +10,8 @@ from typing import (
     List,
     Tuple,
     Iterator,
-    Union)
+    Union,
+    Set)
 
 from ..shared import (
     EOF,
@@ -45,7 +46,10 @@ def _get_match(states: List[Tuple[Node, Capture]]) -> Capture:
     raise exceptions.MatchError('No match')
 
 
-def _next_states(state: Node, captured: Capture) -> Iterator[Tuple[Node, Capture]]:
+NextStateType = Iterator[Tuple[Node, Capture]]
+
+
+def _next_states(state: Node, captured: Capture, visited: Set[Node]) -> NextStateType:
     """
     Go to next CharNode or EOF state.\
     Capture matches along the way
@@ -58,6 +62,12 @@ def _next_states(state: Node, captured: Capture) -> Iterator[Tuple[Node, Capture
     :return: one or more states for the next match
     :private:
     """
+    # Break a** cycle
+    if state in visited:
+        return
+
+    visited.add(state)
+
     if state is EOF:
         return (yield EOF, captured)
 
@@ -72,10 +82,10 @@ def _next_states(state: Node, captured: Capture) -> Iterator[Tuple[Node, Capture
             is_repeated=state.is_repeated)
 
     for s in state.out:
-        yield from _next_states(s, captured)
+        yield from _next_states(s, captured, visited)
 
 
-def next_states(state: Node, captured: Capture) -> Iterator[Tuple[Node, Capture]]:
+def next_states(state: Node, captured: Capture) -> NextStateType:
     """
     Go to next states of the given state
 
@@ -85,10 +95,10 @@ def next_states(state: Node, captured: Capture) -> Iterator[Tuple[Node, Capture]
     :private:
     """
     for s in state.out:
-        yield from _next_states(s, captured)
+        yield from _next_states(s, captured, set())
 
 
-def curr_states(state: Node, captured: Capture) -> Iterator[Tuple[Node, Capture]]:
+def curr_states(state: Node, captured: Capture) -> NextStateType:
     """
     Return a state to match.\
     This may be the current state or a following one.
@@ -97,7 +107,34 @@ def curr_states(state: Node, captured: Capture) -> Iterator[Tuple[Node, Capture]
     :param captured: current capture
     :return: one or more states
     """
-    return _next_states(state, captured)
+    return _next_states(state, captured, set())
+
+
+# todo: remove?
+# this only helps in rare cases like (a|aa)*
+class OrderedSet:
+
+    def __init__(self):
+        self._list = []
+        self._set = set()
+
+    def __bool__(self):
+        return bool(self._list)
+
+    def __iter__(self):
+        yield from self._list
+
+    def extend(self, items):
+        items = tuple(
+            item
+            for item in items
+            if item not in self._set)
+        self._list.extend(items)
+        self._set.update(items)
+
+    def clear(self):
+        self._list.clear()
+        self._set.clear()
 
 
 def match(nfa: NFA, text: str) -> Union[MatchedType, None]:
@@ -116,8 +153,8 @@ def match(nfa: NFA, text: str) -> Union[MatchedType, None]:
     :param text: a text to match against
     :return: match or ``None``
     """
-    curr_list = []
-    next_list = []
+    curr_list = OrderedSet()
+    next_list = OrderedSet()
 
     curr_list.extend(curr_states(
         state=nfa.state,
