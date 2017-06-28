@@ -21,7 +21,7 @@ Mostly based on Thompson's NFA.
 - [x] Basic operators: `*`, `?`, `+` and `|`
 - [x] Capturing groups
 - [x] Symbols escaping
-- [ ] Shorthands: `\w` and `\d`
+- [x] Shorthands: `\w` and `\d`
 - [ ] Sets `[...]`
 - [ ] Char ranges
 - [ ] Repetition ranges `{n, m}`
