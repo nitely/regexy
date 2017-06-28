@@ -1,5 +1,19 @@
 # -*- coding: utf-8 -*-
 
+"""
+Tools for compiling a regular expression\
+into some of the in-between conversions\
+from infix regular expression to NFA
+
+The compiling steps are not made for\
+performance but for readability and maintainability.\
+This is mostly because resulting NFAs should be\
+compiled once and cached on import time.\
+One-off scripts are not a use-case I care about
+
+:public:
+"""
+
 import collections
 
 from .parse import (

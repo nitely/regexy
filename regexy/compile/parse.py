@@ -2,6 +2,8 @@
 
 """
 Tools to parse a regular expression into nodes
+
+:private:
 """
 
 from typing import (

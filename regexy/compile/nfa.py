@@ -1,5 +1,11 @@
 # -*- coding: utf-8 -*-
 
+"""
+Tools for creating the NFA states
+"""
+
+from typing import Iterator
+
 from ..shared import (
     Node,
     EOF,
@@ -10,14 +16,21 @@ from ..shared import (
 __all__ = ['nfa']
 
 
-def _combine(origin_state, target_state, visited=None):
+def _combine(origin_state: Node, target_state: Node, visited: set=None) -> None:
     """
     Set all state ends to the target state
 
     We could keep track of node ends instead\
     of iterating all of them on every combination.\
     But it is a worthless optimization since\
-    NFAs are cached
+    the resulting NFAs can be cached
+
+    :param origin_state: the root of the state\
+    that will point to the target
+    :param target_state: the state the origin will point at
+    :param visited: for caching the visited nodes\
+    and breaking the cycle
+    :private:
     """
     assert isinstance(origin_state, Node)
 
@@ -35,7 +48,21 @@ def _combine(origin_state, target_state, visited=None):
             _combine(state, target_state, visited)
 
 
-def nfa(nodes):
+def nfa(nodes: Iterator[Node]) -> Node:
+    """
+    Converts a sequence of nodes into a NFA\
+    ready to be matched against a string
+
+    This creates the connections for every node.\
+    EOF is temporary placed on latest created state\
+    and replaced by a connection to other node later,\
+    so leaf nodes are the only nodes containing an EOF\
+    in the resulting NFA
+
+    :param nodes: an iterator of nodes\
+    to be converted into a NFA
+    :return: the NFA first state/node
+    """
     states = []
 
     for node in nodes:
