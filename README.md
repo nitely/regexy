@@ -20,7 +20,7 @@ Mostly based on Thompson's NFA.
 - [x] Matcher
 - [x] Basic operators: `*`, `?`, `+` and `|`
 - [x] Capturing groups
-- [ ] Symbols escaping
+- [x] Symbols escaping
 - [ ] Shorthands: `\w` and `\d`
 - [ ] Sets `[...]`
 - [ ] Char ranges
