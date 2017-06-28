@@ -56,28 +56,28 @@ regexy.match(regexy.compile(r'a'), 'a')
 # ()
 ```
 
-Streams are supported
+Streams are supported (i.e: network and files)
 
 ```python
 import io
 import regexy
 
 
-def gen():
+def stream_gen():
     stream = io.BytesIO(b'Im a stream')
     stream_wrapper = io.TextIOWrapper(stream, encoding='utf-8', write_through=True)
 
     while True:
-        char = stream_wrapper.read(5)
+        chars = stream_wrapper.read(5)
 
-        if not char:
+        if not chars:
             break
 
-        yield from char
+        yield from chars
 
     stream.close()
 
-regexy.match(regexy.compile(r'(\w+| )*'), gen())
+regexy.match(regexy.compile(r'(\w+| )*'), stream_gen())
 # (('Im', ' ', 'a', ' ', 'stream'),)
 ```
 
