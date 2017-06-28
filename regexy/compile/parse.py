@@ -42,6 +42,7 @@ def _parse(expression: str) -> Iterator[Node]:
 
     :param expression: regular expression
     :return: iterator of nodes
+    :private:
     """
     escape = False
 
@@ -64,6 +65,7 @@ def parse(expression: str) -> List[Node]:
 
     :param expression: regular expression
     :return: list of nodes
+    :private:
     """
     return list(_parse(expression))
 
@@ -80,6 +82,7 @@ def fill_groups(nodes: List[Node]) -> int:
 
     :param nodes: a list of nodes
     :return: number of groups
+    :private:
     """
     groups_count = 0
     groups = []
@@ -126,7 +129,7 @@ def join_atoms(nodes: Iterator[Node]) -> Iterator[Node]:
     To clarify why this is necessary say there\
     is a math formula (not a regex) such as ``1+2``.\
     In RPN this would read as ``12+``.\
-    Now what about 11+12? without joiners this would\
+    Now what about ``11+12``? without joiners this would\
     read ``1112+`` and would be wrongly executed as ``111+2``.\
     Enter joins the RPN is ``1~11~2+`` and the parser\
     will know ``1~1`` means ``11`` and\
@@ -147,6 +150,7 @@ def join_atoms(nodes: Iterator[Node]) -> Iterator[Node]:
 
     :param nodes: a iterator of nodes
     :return: iterator of nodes containing joiners
+    :private:
     """
     atoms_count = 0
 
