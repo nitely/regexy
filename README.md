@@ -56,6 +56,31 @@ regexy.match(regexy.compile(r'a'), 'a')
 # ()
 ```
 
+Streams are supported
+
+```python
+import io
+import regexy
+
+
+def gen():
+    stream = io.BytesIO(b'Im a stream')
+    stream_wrapper = io.TextIOWrapper(stream, encoding='utf-8', write_through=True)
+
+    while True:
+        char = stream_wrapper.read(5)
+
+        if not char:
+            break
+
+        yield from char
+
+    stream.close()
+
+regexy.match(regexy.compile(r'(\w+| )*'), gen())
+# (('Im', ' ', 'a', ' ', 'stream'),)
+```
+
 
 # Docs
 
