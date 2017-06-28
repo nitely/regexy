@@ -88,8 +88,20 @@ class ReactTest(unittest.TestCase):
 
     def test_escape(self):
         self.assertEqual(match(r'\(a\)', '(a)'), ())
-        self.assertEqual(match(r'a\*b', 'a*b'), ())
-        self.assertEqual(match(r'a\*b*', 'a*bbb'), ())
-        self.assertEqual(match(r'\a', 'a'), ())
-        self.assertEqual(match(r'\\', '\\'), ())
-        self.assertEqual(match(r'\\\\', '\\\\'), ())
+        self.assertIsNotNone(match(r'a\*b', 'a*b'))
+        self.assertIsNotNone(match(r'a\*b*', 'a*bbb'))
+        self.assertIsNotNone(match(r'\a', 'a'))
+        self.assertIsNotNone(match(r'\\', '\\'))
+        self.assertIsNotNone(match(r'\\\\', '\\\\'))
+
+    def test_alphanum_shorthand(self):
+        self.assertIsNotNone(match(r'\w', 'a'))
+        self.assertIsNotNone(match(r'\w*', 'abc123'))
+        self.assertEqual(match(r'(\w)', 'a'), ('a',))
+
+    def test_digit(self):
+        self.assertIsNotNone(match(r'\d', '1'))
+        self.assertIsNotNone(match(r'\d*', '123'))
+        self.assertEqual(match(r'(\d)', '1'), ('1',))
+        self.assertIsNotNone(match(r'\d', '۲'))  # Kharosthi numeral
+        self.assertIsNone(match(r'\d', '⅕'))

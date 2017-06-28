@@ -4,7 +4,9 @@ from ..shared import (
     OpNode,
     GroupNode,
     CharNode,
-    Symbols)
+    Symbols,
+    AlphaNumNode,
+    DigitNode)
 
 
 __all__ = [
@@ -24,7 +26,8 @@ SYMBOLS = {
 
 
 SHORTHANDS = {
-    'w': None,  # class AlphaNumNode(ShorthandNode), class ShorthandNode(CharNode)
+    'w': AlphaNumNode,
+    'd': DigitNode
 }
 
 

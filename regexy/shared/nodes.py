@@ -39,6 +39,41 @@ class GroupNode(SymbolNode):
         self.is_repeated = is_repeated
 
 
+class ShorthandNode(CharNode):
+    """"""
+
+
+class CharMatcher:
+
+    def __init__(self, char, compare):
+        self.char = '\\%s' % char
+        self.compare = compare
+
+    def __eq__(self, other):
+        return self.compare(other)
+
+    def __repr__(self):
+        return self.char
+
+
+class AlphaNumNode(ShorthandNode):
+    """"""
+    def __init__(self, char, *args, **kwargs):
+        super().__init__(
+            char=CharMatcher(char=char, compare=lambda c: c.isalnum()),
+            *args,
+            **kwargs)
+
+
+class DigitNode(ShorthandNode):
+    """"""
+    def __init__(self, char, *args, **kwargs):
+        super().__init__(
+            char=CharMatcher(char=char, compare=lambda c: c.isdigit()),
+            *args,
+            **kwargs)
+
+
 class EOFNode(Node):
     """"""
 
