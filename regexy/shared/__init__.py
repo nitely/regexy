@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 
+"""
+Internally shared resources
+"""
+
 from .symbols import Symbols
 from .nodes import (
     Node,

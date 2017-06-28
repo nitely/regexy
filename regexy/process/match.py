@@ -114,7 +114,7 @@ def match(nfa: NFA, text: str) -> Union[MatchedType, None]:
     Return the matched groups or\
     an empty sequence if the regex has no groups or\
     ``None`` if no match is found
-    
+
     :param nfa: a NFA
     :param text: a text to match against
     :return: match or ``None``
