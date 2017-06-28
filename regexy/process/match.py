@@ -1,17 +1,41 @@
 # -*- coding: utf-8 -*-
 
+"""
+Matching for regular expressions
+"""
+
+from typing import (
+    List,
+    Tuple,
+    Iterator,
+    Union)
+
 from ..shared import (
     EOF,
     CharNode,
     GroupNode,
+    Node,
     exceptions)
+from ..compile.compile import NFA
 from . import captures
+from .captures import (
+    Capture,
+    MatchedType)
 
 
 __all__ = ['match']
 
 
-def _get_match(states):
+def _get_match(states: List[Tuple[Node, Capture]]) -> Capture:
+    """
+    Find a state that ended with EOF\
+    meaning it matched, otherwise raise an error
+
+    :param states: sequence of matches
+    :return: the last capture associated to the match
+    :raise `exceptions.MatchError`: when no match if found
+    :private:
+    """
     for s, captured in states:
         if s == EOF:
             return captured
@@ -19,7 +43,19 @@ def _get_match(states):
     raise exceptions.MatchError('No match')
 
 
-def _next_states(state, captured):
+def _next_states(state: Node, captured: Capture) -> Iterator[Tuple[Node, Capture]]:
+    """
+    Go to next CharNode or EOF state.\
+    Capture matches along the way
+
+    This will follow all state connections,\
+    so it may return multiple states
+
+    :param state: current state/node
+    :param captured: current capture
+    :return: one or more states for the next match
+    :private:
+    """
     if state is EOF:
         return (yield EOF, captured)
 
@@ -42,16 +78,47 @@ def _next_states(state, captured):
         yield from _next_states(s, captured)
 
 
-def next_states(state, captured):
+def next_states(state: Node, captured: Capture) -> Iterator[Tuple[Node, Capture]]:
+    """
+    Go to next states of the given state
+
+    :param state: current state
+    :param captured: current capture
+    :return: one or more states
+    :private:
+    """
     for s in state.out:
         yield from _next_states(s, captured)
 
 
-def curr_states(state, captured):
+def curr_states(state: Node, captured: Capture) -> Iterator[Tuple[Node, Capture]]:
+    """
+    Return a state to match.\
+    This may be the current state or a following one.
+
+    :param state: current state
+    :param captured: current capture
+    :return: one or more states
+    """
     return _next_states(state, captured)
 
 
-def match(nfa, text):
+def match(nfa: NFA, text: str) -> Union[MatchedType, None]:
+    """
+    Match works by going through the given text\
+    and matching it to the current states\
+    (one or multiple states)
+
+    The algorithm is an extended version of Thompson's NFA
+
+    Return the matched groups or\
+    an empty sequence if the regex has no groups or\
+    ``None`` if no match is found
+    
+    :param nfa: a NFA
+    :param text: a text to match against
+    :return: match or ``None``
+    """
     curr_list = []
     next_list = []
 
