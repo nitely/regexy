@@ -5,6 +5,7 @@ This module contains all\
 the node types of the NFA
 
 :ivar Node EOF: EOFNode singleton
+:private:
 """
 
 from typing import Sequence

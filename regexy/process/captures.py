@@ -4,6 +4,8 @@
 Tools for creating the capturing\
 groups matching results of ``match``\
 and friends
+
+:private:
 """
 
 import collections

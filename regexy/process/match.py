@@ -2,6 +2,8 @@
 
 """
 Matching for regular expressions
+
+:private:
 """
 
 from typing import (
