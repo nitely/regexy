@@ -1,6 +1,17 @@
 # -*- coding: utf-8 -*-
 
+"""
+Tools to parse a regular expression into nodes
+
+:private:
+"""
+
+from typing import (
+    Iterator,
+    List)
+
 from ..shared import (
+    Node,
     OpNode,
     GroupNode,
     CharNode,
@@ -31,7 +42,18 @@ SHORTHANDS = {
 }
 
 
-def _parse(expression):
+def _parse(expression: str) -> Iterator[Node]:
+    """
+    Parse a regular expression into a sequence nodes.\
+    Literals (escaped chars) are parsed as shorthands\
+    (if found) or as regular char nodes.\
+    Symbols (``*``, etc) are parsed into symbol nodes.\
+    Same for groups.
+
+    :param expression: regular expression
+    :return: iterator of nodes
+    :private:
+    """
     escape = False
 
     for char in expression:
@@ -47,11 +69,31 @@ def _parse(expression):
         yield SYMBOLS.get(char, CharNode)(char=char)
 
 
-def parse(expression):
+def parse(expression: str) -> List[Node]:
+    """
+    Parse a regular expression into nodes
+
+    :param expression: regular expression
+    :return: list of nodes
+    :private:
+    """
     return list(_parse(expression))
 
 
-def fill_groups(nodes):
+def fill_groups(nodes: List[Node]) -> int:
+    """
+    Fill groups with missing data.\
+    This is index of group, whether\
+    is a repeat group or not and capturing\
+    flag for chars within the group
+
+    This is required for later capturing of\
+    characters when searching/matching a text
+
+    :param nodes: a list of nodes
+    :return: number of groups
+    :private:
+    """
     groups_count = 0
     groups = []
 
@@ -87,11 +129,24 @@ def fill_groups(nodes):
     return groups_count
 
 
-def join_atoms(nodes, joiner=Symbols.JOINER):
+def join_atoms(nodes: Iterator[Node]) -> Iterator[Node]:
     """
-    Add joiner to regular expression
+    Add joiners to a sequence of nodes.\
+    Joiners are meant to join sets\
+    of chars that belong together.\
+    This is required for later conversion into rpn notation.
 
-    Outputs:
+    To clarify why this is necessary say there\
+    is a math formula (not a regex) such as ``1+2``.\
+    In RPN this would read as ``12+``.\
+    Now what about ``11+12``? without joiners this would\
+    read ``1112+`` and would be wrongly executed as ``111+2``.\
+    Enter joins the RPN is ``1~11~2+`` and the parser\
+    will know ``1~1`` means ``11`` and\
+    ``1~2`` means ``12`` resulting in ``11+12``.
+
+    Outputs::
+
         a~(b|c)*~d
         (a~b~c|d~f~g)
         a~b~c
@@ -103,6 +158,9 @@ def join_atoms(nodes, joiner=Symbols.JOINER):
         (a)~(b)
         (a)~b
 
+    :param nodes: a iterator of nodes
+    :return: iterator of nodes containing joiners
+    :private:
     """
     atoms_count = 0
 
@@ -112,14 +170,14 @@ def join_atoms(nodes, joiner=Symbols.JOINER):
 
             if atoms_count > 1:
                 atoms_count = 1
-                yield OpNode(char=joiner)
+                yield OpNode(char=Symbols.JOINER)
 
             yield node
             continue
 
         if node.char == Symbols.GROUP_START:
             if atoms_count:
-                yield OpNode(char=joiner)
+                yield OpNode(char=Symbols.JOINER)
 
             atoms_count = 0
             yield node
