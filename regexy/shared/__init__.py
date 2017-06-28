@@ -12,7 +12,10 @@ from .nodes import (
     OpNode,
     GroupNode,
     EOFNode,
-    EOF)
+    EOF,
+    ShorthandNode,
+    AlphaNumNode,
+    DigitNode)
 from . import exceptions
 
 

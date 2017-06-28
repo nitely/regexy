@@ -15,7 +15,9 @@ from ..shared import (
     OpNode,
     GroupNode,
     CharNode,
-    Symbols)
+    Symbols,
+    AlphaNumNode,
+    DigitNode)
 
 
 __all__ = [
@@ -24,7 +26,7 @@ __all__ = [
     'join_atoms']
 
 
-NODES = {
+SYMBOLS = {
     Symbols.JOINER: OpNode,
     Symbols.ZERO_OR_MORE: OpNode,
     Symbols.ZERO_OR_ONE: OpNode,
@@ -32,6 +34,12 @@ NODES = {
     Symbols.OR: OpNode,
     Symbols.GROUP_START: GroupNode,
     Symbols.GROUP_END: GroupNode}
+
+
+SHORTHANDS = {
+    'w': AlphaNumNode,
+    'd': DigitNode
+}
 
 
 def _parse(expression: str) -> Iterator[Node]:
@@ -51,14 +59,14 @@ def _parse(expression: str) -> Iterator[Node]:
     for char in expression:
         if escape:
             escape = False
-            yield CharNode(char=char)
+            yield SHORTHANDS.get(char, CharNode)(char=char)
             continue
 
         if char == '\\':
             escape = True
             continue
 
-        yield NODES.get(char, CharNode)(char=char)
+        yield SYMBOLS.get(char, CharNode)(char=char)
 
 
 def parse(expression: str) -> List[Node]:

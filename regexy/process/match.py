@@ -62,11 +62,6 @@ def _next_states(state: Node, captured: Capture) -> Iterator[Tuple[Node, Capture
         return (yield EOF, captured)
 
     if isinstance(state, CharNode):
-        if state.is_captured:
-            captured = captures.capture(
-                char=state.char,
-                prev=captured)
-
         return (yield state, captured)
 
     if isinstance(state, GroupNode):
@@ -132,13 +127,18 @@ def match(nfa: NFA, text: str) -> Union[MatchedType, None]:
         if not curr_list:
             break
 
-        for curr_state, curr_captured in curr_list:
+        for curr_state, captured in curr_list:
             if char != curr_state.char:
                 continue
 
+            if curr_state.is_captured:
+                captured = captures.capture(
+                    char=char,
+                    prev=captured)
+
             next_list.extend(next_states(
                 state=curr_state,
-                captured=curr_captured))
+                captured=captured))
 
         curr_list, next_list = next_list, curr_list
         next_list.clear()
