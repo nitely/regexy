@@ -22,9 +22,12 @@ Mostly based on Thompson's NFA.
 - [x] Capturing groups
 - [x] Symbols escaping
 - [x] Shorthands: `\w` and `\d`
-- [ ] Sets `[...]`
-- [ ] Char ranges
+- [x] Sets `[...]` (+ ranges and shorthands)
 - [ ] Repetition ranges `{n, m}`
+- [ ] non-capturing groups
+- [ ] Named capturing groups
+- [ ] Sets complement
+- [ ] Match any (dot)
 - [ ] ... ?
 
 ## Compatibility
