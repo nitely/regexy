@@ -74,6 +74,10 @@ class RegexyTest(unittest.TestCase):
         self.assertEqual(to_atoms(r'\a'), 'a')
         self.assertEqual(to_atoms(r'a\*b'), 'a~*~b')
         self.assertEqual(to_atoms(r'\(a\)'), '(~a~)')
+        self.assertEqual(to_atoms(r'\w'), '\w')
+        self.assertEqual(to_atoms(r'\d'), '\d')
+        self.assertEqual(to_atoms(r'[a-z]'), '[a-z]')
+        self.assertEqual(to_atoms(r'[a\-z]'), '[-az]')
 
     def test_one_or_more_op(self):
         self.assertIsNotNone(match('a+', 'aaaa'))
@@ -185,3 +189,7 @@ class RegexyTest(unittest.TestCase):
         self.assertIsNotNone(match(r'[\---]', '-'))
         self.assertIsNotNone(match(r'[\--\-a-z]', 'b'))
         self.assertIsNotNone(match(r'[\---a-z]', 'b'))
+        self.assertIsNotNone(match(r'[-a-z]', 'b'))
+        self.assertIsNotNone(match(r'[-a-z]', '-'))
+        self.assertIsNotNone(match(r'[-a]', 'a'))
+        self.assertIsNotNone(match(r'[-a]', '-'))

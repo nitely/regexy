@@ -79,7 +79,7 @@ def to_rpn(expression: str) -> str:
     :private:
     """
     return ''.join(
-        node.char
+        str(node.char)
         for node in rpn(join_atoms(parse(expression))))
 
 
@@ -95,6 +95,6 @@ def to_atoms(expression: str) -> str:
     :private:
     """
     return ''.join(
-        node.char
+        str(node.char)
         for node in join_atoms(parse(expression)))
 
