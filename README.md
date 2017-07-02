@@ -47,7 +47,7 @@ Notice `regexy` returns all capturing groups specified within a repeated sub-exp
 import regexy
 
 regexy.match(regexy.compile(r'((a)*b)'), 'aab')
-# ('aab', ('a', 'a')
+# ('aab', ('a', 'a'))
 
 regexy.match(regexy.compile(r'a'), 'b')
 # None
@@ -57,6 +57,9 @@ regexy.match(regexy.compile(r'a'), 'a')
 ```
 
 Streams are supported (i.e: network and files)
+
+> Note: Capturing may take as much RAM as all of
+> the data in worst case when the full regex is captured
 
 ```python
 import io
@@ -75,9 +78,7 @@ def stream_gen():
 
         yield from chars
 
-    stream.close()
-
-regexy.match(regexy.compile(r'(\w+| )*'), stream_gen())
+regexy.match(regexy.compile(r'(\w+| +)*'), stream_gen())
 # (('Im', ' ', 'a', ' ', 'stream'),)
 ```
 

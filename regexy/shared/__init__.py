@@ -15,7 +15,8 @@ from .nodes import (
     EOF,
     ShorthandNode,
     AlphaNumNode,
-    DigitNode)
+    DigitNode,
+    SetNode)
 from . import exceptions
 
 

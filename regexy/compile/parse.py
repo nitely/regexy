@@ -17,7 +17,8 @@ from ..shared import (
     CharNode,
     Symbols,
     AlphaNumNode,
-    DigitNode)
+    DigitNode,
+    SetNode)
 
 
 __all__ = [
@@ -42,7 +43,54 @@ SHORTHANDS = {
 }
 
 
-def _parse(expression: str) -> Iterator[Node]:
+def parse_set(set_expression):
+    chars = []
+    ranges = []
+    shorthands = []
+    is_range = False
+    is_escaped = False
+
+    for char in set_expression:
+        if char == '\\' and not is_escaped:
+            is_escaped = True
+            continue
+
+        if is_range:
+            is_escaped = False
+            is_range = False
+            ranges.append(
+                (chars.pop(), char))
+            continue
+
+        if char == '-' and not is_escaped and chars:
+            is_range = True
+            continue
+
+        if is_escaped:
+            is_escaped = False
+
+            if char in SHORTHANDS:
+                shorthands.append(SHORTHANDS[char](char=char).char)
+            else:
+                chars.append(char)
+
+            continue
+
+        chars.append(char)
+
+    assert not is_escaped
+    assert chars or ranges or shorthands
+
+    if is_range:
+        chars.append('-')
+
+    return SetNode(
+        chars=chars,
+        ranges=ranges,
+        shorthands=shorthands)
+
+
+def parse(expression: str) -> Iterator[Node]:
     """
     Parse a regular expression into a sequence nodes.\
     Literals (escaped chars) are parsed as shorthands\
@@ -54,30 +102,40 @@ def _parse(expression: str) -> Iterator[Node]:
     :return: iterator of nodes
     :private:
     """
-    escape = False
+    is_escaped = False
+    is_set = False
+    set_expression = []
 
     for char in expression:
-        if escape:
-            escape = False
+        if char == ']' and not is_escaped and set_expression:
+            is_set = False
+            yield parse_set(set_expression)
+            set_expression.clear()
+            continue
+
+        if is_set:
+            is_escaped = char == '\\' and not is_escaped
+            set_expression.append(char)
+            continue
+
+        if char == '[' and not is_escaped:
+            is_set = True
+            continue
+
+        if is_escaped:
+            is_escaped = False
             yield SHORTHANDS.get(char, CharNode)(char=char)
             continue
 
         if char == '\\':
-            escape = True
+            is_escaped = True
             continue
 
         yield SYMBOLS.get(char, CharNode)(char=char)
 
-
-def parse(expression: str) -> List[Node]:
-    """
-    Parse a regular expression into nodes
-
-    :param expression: regular expression
-    :return: list of nodes
-    :private:
-    """
-    return list(_parse(expression))
+    assert not set_expression
+    assert not is_escaped
+    assert not is_set
 
 
 def fill_groups(nodes: List[Node]) -> int:

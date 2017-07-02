@@ -60,7 +60,7 @@ def to_nfa(expression: str) -> NFA:
     :return: NFA for the given expression
     :public:
     """
-    nodes = parse(expression)
+    nodes = list(parse(expression))
     groups_count = fill_groups(nodes)
     return NFA(
         state=nfa(rpn(join_atoms(nodes))),
@@ -79,7 +79,7 @@ def to_rpn(expression: str) -> str:
     :private:
     """
     return ''.join(
-        node.char
+        str(node.char)
         for node in rpn(join_atoms(parse(expression))))
 
 
@@ -95,6 +95,6 @@ def to_atoms(expression: str) -> str:
     :private:
     """
     return ''.join(
-        node.char
+        str(node.char)
         for node in join_atoms(parse(expression)))
 

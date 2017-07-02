@@ -69,10 +69,12 @@ def _next_states(state: Node, captured: Capture, visited: Set[Node]) -> NextStat
     visited.add(state)
 
     if state is EOF:
-        return (yield EOF, captured)
+        yield EOF, captured
+        return
 
     if isinstance(state, CharNode):
-        return (yield state, captured)
+        yield state, captured
+        return
 
     if isinstance(state, GroupNode):
         captured = captures.capture(
