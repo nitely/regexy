@@ -60,7 +60,7 @@ def to_nfa(expression: str) -> NFA:
     :return: NFA for the given expression
     :public:
     """
-    nodes = parse(expression)
+    nodes = list(parse(expression))
     groups_count = fill_groups(nodes)
     return NFA(
         state=nfa(rpn(join_atoms(nodes))),

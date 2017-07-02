@@ -119,6 +119,39 @@ class DigitNode(ShorthandNode):
             **kwargs)
 
 
+class SetMatcher:
+
+    def __init__(self, chars, ranges, shorthands):
+        self._chars = set(chars)
+        self._ranges = list(ranges)  # todo: interval tree
+        self._shorthands = list(shorthands)
+
+    def __eq__(self, other):
+        return (
+            other in self._chars or
+            any(start <= other <= end
+                for start, end in self._ranges) or
+            other in self._shorthands)
+
+    def __repr__(self):
+        return '[%s%s%s]' % (
+            ''.join(sorted(self._chars)),
+            ''.join(
+                '-'.join((start, end))
+                for start, end in self._ranges),
+            ''.join(
+                str(shorthand)
+                for shorthand in self._shorthands))
+
+
+class SetNode(CharNode):
+    def __init__(self, chars, ranges, shorthands, *args, **kwargs):
+        super().__init__(
+            char=SetMatcher(chars, ranges, shorthands),
+            *args,
+            **kwargs)
+
+
 class EOFNode(Node):
     """
     A node for End Of File.\
