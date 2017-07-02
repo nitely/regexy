@@ -197,3 +197,7 @@ class RegexyTest(unittest.TestCase):
         self.assertIsNotNone(match(r'[a-d-z]', '-'))
         self.assertIsNotNone(match(r'[a-d-z]', 'z'))
         self.assertIsNone(match(r'[a-d-z]', 'e'))
+        self.assertIsNotNone(match(r'[]]', ']'))
+        self.assertIsNotNone(match(r'[\]]', ']'))
+        self.assertIsNone(match(r'[]]', '['))
+        self.assertIsNone(match(r'[]]', ']]'))

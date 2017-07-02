@@ -70,7 +70,8 @@ def parse_set(set_expression):
             is_escaped = False
 
             if char in SHORTHANDS:
-                shorthands.append(SHORTHANDS[char](char=char).char)
+                shorthands.append(
+                    SHORTHANDS[char](char=char).char)
             else:
                 chars.append(char)
 
@@ -104,22 +105,21 @@ def parse(expression: str) -> Iterator[Node]:
     """
     is_escaped = False
     is_set = False
-    set_expression = []
+    set_start = 0
 
-    for char in expression:
-        if char == ']' and not is_escaped and set_expression:
+    for index, char in enumerate(expression):
+        if char == ']' and not is_escaped and set_start < index:
             is_set = False
-            yield parse_set(set_expression)
-            set_expression.clear()
+            yield parse_set(expression[set_start:index])
             continue
 
         if is_set:
             is_escaped = char == '\\' and not is_escaped
-            set_expression.append(char)
             continue
 
         if char == '[' and not is_escaped:
             is_set = True
+            set_start = index + 1
             continue
 
         if is_escaped:
@@ -133,7 +133,6 @@ def parse(expression: str) -> Iterator[Node]:
 
         yield SYMBOLS.get(char, CharNode)(char=char)
 
-    assert not set_expression
     assert not is_escaped
     assert not is_set
 
