@@ -92,6 +92,16 @@ class GroupNode(SymbolNode):
         self.is_repeated = is_repeated
 
 
+class RepetitionRangeNode(OpNode):
+
+    # todo: char should print as {start, end}
+
+    def __init__(self, start: int, end: int=None, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.start = start
+        self.end = end
+
+
 class ShorthandNode(CharNode):
     """"""
 
