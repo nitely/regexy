@@ -18,7 +18,8 @@ from ..shared import (
     Symbols,
     AlphaNumNode,
     DigitNode,
-    SetNode)
+    SetNode,
+    RepetitionRangeNode)
 
 
 __all__ = [
@@ -43,7 +44,14 @@ SHORTHANDS = {
 }
 
 
-def parse_set(set_expression):
+def parse_set(set_expression: Iterator[str]) -> SetNode:
+    """
+    Parse a set atom (``[...]``) into a SetNode
+
+    :param set_expression: content of a set (no brackets included)
+    :return: a set node to match against (like any other char node)
+    :private:
+    """
     chars = []
     ranges = []
     shorthands = []
@@ -91,24 +99,60 @@ def parse_set(set_expression):
         shorthands=shorthands)
 
 
+def parse_repetition_range(range_expression):
+    start = []
+    end = []
+
+    curr = start
+
+    for char in range_expression:
+        if char == ',':
+            assert curr == start
+            curr = end
+            continue
+
+        assert '0' <= char <= '9'
+        curr.append(char)
+
+    if curr == start:
+        end = start
+
+    start = int(''.join(start) or 0)
+
+    if end:
+        end = int(''.join(end))
+    else:
+        end = None
+
+    return RepetitionRangeNode(
+        char=Symbols.REPETITION_RANGE,
+        start=start,
+        end=end)
+
+
 def parse(expression: str) -> Iterator[Node]:
     """
     Parse a regular expression into a sequence nodes.\
     Literals (escaped chars) are parsed as shorthands\
     (if found) or as regular char nodes.\
     Symbols (``*``, etc) are parsed into symbol nodes.\
-    Same for groups.
+    Same for groups. Sets are parsed into set nodes.
 
     :param expression: regular expression
     :return: iterator of nodes
     :private:
     """
     is_escaped = False
+
     is_set = False
     set_start = 0
 
+    is_repetition_range = False
+    repetition_range_tart = 0
+
     for index, char in enumerate(expression):
         if char == ']' and not is_escaped and set_start < index:
+            assert is_set
             is_set = False
             yield parse_set(expression[set_start:index])
             continue
@@ -118,8 +162,24 @@ def parse(expression: str) -> Iterator[Node]:
             continue
 
         if char == '[' and not is_escaped:
+            assert not is_set
             is_set = True
             set_start = index + 1
+            continue
+
+        if char == '}' and not is_escaped:
+            assert is_repetition_range
+            is_repetition_range = False
+            yield parse_repetition_range(expression[repetition_range_tart:index])
+            continue
+
+        if is_repetition_range:
+            continue
+
+        if char == '{' and not is_escaped:
+            assert not is_repetition_range
+            is_repetition_range = True
+            repetition_range_tart = index + 1
             continue
 
         if is_escaped:
@@ -135,6 +195,7 @@ def parse(expression: str) -> Iterator[Node]:
 
     assert not is_escaped
     assert not is_set
+    assert not is_repetition_range
 
 
 def fill_groups(nodes: List[Node]) -> int:
@@ -173,7 +234,8 @@ def fill_groups(nodes: List[Node]) -> int:
             else:
                 is_repeated = next_node.char in (
                     Symbols.ZERO_OR_MORE,
-                    Symbols.ONE_OR_MORE)
+                    Symbols.ONE_OR_MORE,
+                    Symbols.REPETITION_RANGE)
 
             start = groups.pop()
             start.is_repeated = is_repeated
@@ -249,7 +311,8 @@ def join_atoms(nodes: Iterator[Node]) -> Iterator[Node]:
                 Symbols.GROUP_END,
                 Symbols.ZERO_OR_MORE,
                 Symbols.ONE_OR_MORE,
-                Symbols.ZERO_OR_ONE}:
+                Symbols.ZERO_OR_ONE,
+                Symbols.REPETITION_RANGE}:
             atoms_count += 1
             yield node
             continue
