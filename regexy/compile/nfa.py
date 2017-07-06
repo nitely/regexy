@@ -6,16 +6,41 @@ Tools for creating the NFA states
 :private:
 """
 
+import copy
 from typing import Iterator
 
 from ..shared import (
     Node,
     EOF,
     CharNode,
-    Symbols)
+    Symbols,
+    RepetitionRangeNode,
+    OpNode)
 
 
 __all__ = ['nfa']
+
+
+def _dup(state: Node, visited: set=None) -> Node:
+    assert isinstance(state, Node)
+
+    visited = visited or set()
+
+    if state in visited:
+        return state
+
+    visited.add(state)
+
+    if state is EOF:
+        return EOF
+
+    state_copy = copy.copy(state)
+
+    state_copy.out = [
+        _dup(s, visited)
+        for i, s in enumerate(state_copy.out)]
+
+    return state_copy
 
 
 def _combine(origin_state: Node, target_state: Node, visited: set=None) -> None:
@@ -35,6 +60,7 @@ def _combine(origin_state: Node, target_state: Node, visited: set=None) -> None:
     :private:
     """
     assert isinstance(origin_state, Node)
+    assert isinstance(target_state, Node)
 
     visited = visited or set()
 
@@ -119,6 +145,49 @@ def nfa(nodes: Iterator[Node]) -> Node:
             node.out = [EOF]
             _combine(state, node)
             states.append(state)
+            continue
+
+        if node.char == Symbols.REPETITION_RANGE:
+            assert isinstance(node, RepetitionRangeNode)
+
+            # a{2} -> aa
+            # a{2,2} -> aa
+            if node.start == node.end:
+                state = states.pop()
+                curr = state
+
+                for _ in range(node.end - 1):
+                    new_state = _dup(curr)
+                    _combine(curr, new_state)
+                    curr = new_state
+
+                states.append(state)
+                continue
+
+            # a{1,2} -> aa?
+            # a{,2} -> a?a?
+            if node.end is not None:
+                state = states.pop()
+                curr = state
+
+                for _ in range(node.start - 1):
+                    new_state = _dup(curr)
+                    _combine(curr, new_state)
+                    curr = new_state
+
+                for _ in range(node.start, node.end):
+                    new_state = OpNode(
+                        char=Symbols.ZERO_OR_ONE,
+                        out=[_dup(curr), EOF])
+                    _combine(curr, new_state)
+                    curr = new_state
+
+                states.append(state)
+                continue
+
+            # a{1,} -> aa*
+            # a{,} -> a*
+
             continue
 
         raise ValueError('Unhandled node: %s' % repr(node))
