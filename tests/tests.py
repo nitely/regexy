@@ -201,3 +201,15 @@ class RegexyTest(unittest.TestCase):
         self.assertIsNotNone(match(r'[\]]', ']'))
         self.assertIsNone(match(r'[]]', '['))
         self.assertIsNone(match(r'[]]', ']]'))
+
+    def test_repetition_range(self):
+        self.assertIsNotNone(match(r'a{1}', 'a'))
+        self.assertIsNotNone(match(r'a{2}', 'aa'))
+        self.assertIsNotNone(match(r'a{3}', 'aaa'))
+        self.assertIsNone(match(r'a{3}', 'aaaa'))
+        self.assertIsNone(match(r'a{1}', ''))
+        self.assertIsNotNone(match(r'a{1,1}', 'a'))
+        self.assertIsNotNone(match(r'a{1,2}', 'a'))
+        self.assertIsNotNone(match(r'a{1,2}', 'aa'))
+        self.assertIsNone(match(r'a{1,2}', 'aaa'))
+        self.assertIsNone(match(r'a{2,4}', 'a'))
