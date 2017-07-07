@@ -23,7 +23,7 @@ Mostly based on Thompson's NFA.
 - [x] Symbols escaping
 - [x] Shorthands: `\w` and `\d`
 - [x] Sets `[...]` (+ ranges and shorthands)
-- [ ] Repetition ranges `{n, m}`
+- [x] Repetition ranges `{n, m}`
 - [ ] non-capturing groups
 - [ ] Named capturing groups
 - [ ] Sets complement
