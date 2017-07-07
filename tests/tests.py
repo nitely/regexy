@@ -29,6 +29,7 @@ class RegexyTest(unittest.TestCase):
         pass
 
     def test_match(self):
+        self.assertIsNotNone(match('', ''))
         self.assertIsNotNone(match('a', 'a'))
         self.assertIsNotNone(match('(a)b', 'ab'))
         self.assertIsNotNone(match('(a)*', 'aa'))
@@ -40,6 +41,7 @@ class RegexyTest(unittest.TestCase):
         self.assertIsNotNone(match('a|b', 'b'))
         self.assertIsNone(match('a(b|c)*d', 'ab'))
         self.assertIsNone(match('b', 'a'))
+        self.assertIsNone(match('', 'a'))
 
     def test_repetition_cycle(self):
         self.assertIsNotNone(match('a**', 'aaa'))
@@ -207,13 +209,13 @@ class RegexyTest(unittest.TestCase):
         self.assertIsNone(match(r'[]]', ']]'))
 
     def test_repetition_range_expand(self):
-        # self.assertEqual(to_nfa_str(r'a{0}'), to_nfa_str(r''))  # fixme
+        self.assertEqual(to_nfa_str(r'a{0}'), to_nfa_str(r''))
         self.assertEqual(to_nfa_str(r'a{1}'), to_nfa_str(r'a'))
         self.assertEqual(to_nfa_str(r'a{10}'), to_nfa_str(r'a' * 10))
         self.assertEqual(to_nfa_str(r'a{1,}'), to_nfa_str(r'aa*'))
         self.assertEqual(to_nfa_str(r'a{10,}'), to_nfa_str(r'a' * 10 + r'a*'))
         self.assertEqual(to_nfa_str(r'a{10,10}'), to_nfa_str(r'a' * 10))
-        # self.assertEqual(to_nfa_str(r'a{0,0}'), to_nfa_str(r''))  # fixme
+        self.assertEqual(to_nfa_str(r'a{0,0}'), to_nfa_str(r''))
         self.assertEqual(to_nfa_str(r'a{1,2}'), to_nfa_str(r'aa?'))
         self.assertEqual(to_nfa_str(r'a{2,4}'), to_nfa_str(r'aaa?a?'))
         self.assertEqual(to_nfa_str(r'a{,10}'), to_nfa_str(r'a?' * 10))

@@ -7,7 +7,9 @@ Tools for creating the NFA states
 """
 
 import copy
-from typing import Iterator
+from typing import (
+    Iterator,
+    Tuple)
 
 from ..shared import (
     Node,
@@ -93,6 +95,10 @@ def nfa(nodes: Iterator[Node]) -> Node:
     :private:
     """
     states = []
+    nodes = tuple(nodes)  # type: Tuple[Node]
+
+    if not nodes:
+        return Node(char='', out=[EOF])
 
     for node in nodes:
         if isinstance(node, CharNode):
