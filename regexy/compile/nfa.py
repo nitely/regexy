@@ -43,7 +43,7 @@ def _dup(state: Node, visited: set=None) -> Node:
     return state_copy
 
 
-def _combine(state: Node, target_state: Node, visited: set=None) -> None:
+def _combine(origin_state: Node, target_state: Node, visited: set=None) -> None:
     """
     Set all state ends to the target state
 
@@ -52,31 +52,28 @@ def _combine(state: Node, target_state: Node, visited: set=None) -> None:
     But it is a worthless optimization since\
     the resulting NFAs can be cached
 
-    :param state: the root of the state\
+    :param origin_state: the root of the state\
     that will point to the target
     :param target_state: the state the origin will point at
     :param visited: for caching the visited nodes\
     and breaking the cycle
     :private:
     """
-    assert isinstance(state, Node)
+    assert isinstance(origin_state, Node)
     assert isinstance(target_state, Node)
-
-    if state is EOF:
-        return target_state
 
     visited = visited or set()
 
-    if state in visited:
-        return state
+    if origin_state in visited:
+        return
 
-    visited.add(state)
+    visited.add(origin_state)
 
-    state.out = [
-        _combine(s, target_state, visited)
-        for s in state.out]
-
-    return state
+    for i, state in enumerate(origin_state.out):
+        if state is EOF:
+            origin_state.out[i] = target_state
+        else:
+            _combine(state, target_state, visited)
 
 
 def nfa(nodes: Iterator[Node]) -> Node:
