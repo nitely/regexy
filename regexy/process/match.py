@@ -29,6 +29,31 @@ from .captures import (
 __all__ = ['match']
 
 
+class OrderedSet:
+
+    def __init__(self):
+        self._list = []
+        self._set = set()
+
+    def __bool__(self):
+        return bool(self._list)
+
+    def __iter__(self):
+        yield from self._list
+
+    def extend(self, items):
+        items = tuple(
+            item
+            for item in items
+            if item not in self._set)
+        self._list.extend(items)
+        self._set.update(items)
+
+    def clear(self):
+        self._list.clear()
+        self._set.clear()
+
+
 def _get_match(states: List[Tuple[Node, Capture]]) -> Capture:
     """
     Find a state that ended with EOF\
@@ -128,8 +153,8 @@ def match(nfa: NFA, text: str) -> Union[MatchedType, None]:
     :param text: a text to match against
     :return: match or ``None``
     """
-    curr_list = []
-    next_list = []
+    curr_list = OrderedSet()
+    next_list = OrderedSet()
 
     curr_list.extend(curr_states(
         state=nfa.state,
