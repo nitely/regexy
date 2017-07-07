@@ -150,42 +150,25 @@ def nfa(nodes: Iterator[Node]) -> Node:
         if node.char == Symbols.REPETITION_RANGE:
             assert isinstance(node, RepetitionRangeNode)
 
-            if (node.start, node.end) == (0, 0):
-                states.pop()
-                # todo: SkipNode ?
-                states.append(Node(char='', out=[EOF]))
-                continue
-
-            # todo: refactor
-
-            # if node.start > 0:
-            # ...
-
-            # if node.start == node.end:
-            # ...
-
-            # if node.end is None:
-            # ...
-
-            # if node.end is not None:
-            # ...
-
             state = states.pop()
-            first = _dup(state)
-            curr = first
+            first = None
 
-            # a{1,...} -> a...
-            # a{2,...} -> aa...
             if node.start > 0:
+                first = _dup(state)
+                curr = first
+
                 for _ in range(node.start - 1):
                     new_state = _dup(state)
                     _combine(curr, new_state)
                     curr = new_state
 
+            # a{0} ->
+            # a{0,0} ->
             # a{2} -> aa
             # a{2,2} -> aa
             if node.start == node.end:
-                states.append(first)
+                # todo: SkipNode
+                states.append(first or Node(char='', out=[EOF]))
                 continue
 
             # a{1,} -> aa*
@@ -197,12 +180,10 @@ def nfa(nodes: Iterator[Node]) -> Node:
                     out=[new_state, EOF])
                 _combine(new_state, zero_or_more)
 
-                if node.start > 0:
-                    _combine(curr, zero_or_more)
-                else:
-                    first = zero_or_more
+                if first:
+                    _combine(first, zero_or_more)
 
-                states.append(first)
+                states.append(first or zero_or_more)
                 continue
 
             # a{1,2} -> aa?
@@ -213,22 +194,19 @@ def nfa(nodes: Iterator[Node]) -> Node:
                 zero_or_one = OpNode(
                     char=Symbols.ZERO_OR_ONE,
                     out=[_dup(state), EOF])
-
-                if node.start > 0:
-                    _combine(curr, zero_or_one)
-                else:
-                    first = zero_or_one
-
                 curr = zero_or_one
 
                 for _ in range(node.start, node.end - 1):
-                    zero_or_one = OpNode(
+                    zero_or_one_ = OpNode(
                         char=Symbols.ZERO_OR_ONE,
                         out=[_dup(state), EOF])
-                    _combine(curr, zero_or_one)
-                    curr = zero_or_one
+                    _combine(curr, zero_or_one_)
+                    curr = zero_or_one_
 
-                states.append(first)
+                if first:
+                    _combine(first, zero_or_one)
+
+                states.append(first or zero_or_one)
                 continue
 
             assert False, 'Bad op: %s' % repr(node)
