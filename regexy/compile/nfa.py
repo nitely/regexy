@@ -38,12 +38,12 @@ def _dup(state: Node, visited: set=None) -> Node:
 
     state_copy.out = [
         _dup(s, visited)
-        for i, s in enumerate(state_copy.out)]
+        for s in state_copy.out]
 
     return state_copy
 
 
-def _combine(origin_state: Node, target_state: Node, visited: set=None) -> None:
+def _combine(state: Node, target_state: Node, visited: set=None) -> None:
     """
     Set all state ends to the target state
 
@@ -52,28 +52,31 @@ def _combine(origin_state: Node, target_state: Node, visited: set=None) -> None:
     But it is a worthless optimization since\
     the resulting NFAs can be cached
 
-    :param origin_state: the root of the state\
+    :param state: the root of the state\
     that will point to the target
     :param target_state: the state the origin will point at
     :param visited: for caching the visited nodes\
     and breaking the cycle
     :private:
     """
-    assert isinstance(origin_state, Node)
+    assert isinstance(state, Node)
     assert isinstance(target_state, Node)
+
+    if state is EOF:
+        return target_state
 
     visited = visited or set()
 
-    if origin_state in visited:
-        return
+    if state in visited:
+        return state
 
-    visited.add(origin_state)
+    visited.add(state)
 
-    for i, state in enumerate(origin_state.out):
-        if state is EOF:
-            origin_state.out[i] = target_state
-        else:
-            _combine(state, target_state, visited)
+    state.out = [
+        _combine(s, target_state, visited)
+        for s in state.out]
+
+    return state
 
 
 def nfa(nodes: Iterator[Node]) -> Node:
@@ -158,83 +161,82 @@ def nfa(nodes: Iterator[Node]) -> Node:
 
             # todo: refactor
 
+            # if node.start > 0:
+            # ...
+
+            # if node.start == node.end:
+            # ...
+
+            # if node.end is None:
+            # ...
+
+            # if node.end is not None:
+            # ...
+
             state = states.pop()
+            first = _dup(state)
+            curr = first
 
             # a{1,...} -> a...
             # a{2,...} -> aa...
             if node.start > 0:
-                fixed = _dup(state)
-                curr = fixed
-
                 for _ in range(node.start - 1):
                     new_state = _dup(state)
                     _combine(curr, new_state)
                     curr = new_state
 
+            # a{2} -> aa
+            # a{2,2} -> aa
             if node.start == node.end:
-                states.append(fixed)
+                states.append(first)
                 continue
 
             # a{1,} -> aa*
             # a{,} -> a*
             if node.end is None:
-                if node.start > 0:
-                    new_state = _dup(state)
-                    zero_or_more = OpNode(
-                        char=Symbols.ZERO_OR_MORE,
-                        out=[new_state, EOF])
-                    _combine(new_state, zero_or_more)
-                    _combine(curr, zero_or_more)
-                    states.append(fixed)
-                else:
-                    zero_or_more = OpNode(
-                        char=Symbols.ZERO_OR_MORE,
-                        out=[state, EOF])
-                    _combine(state, zero_or_more)
-                    states.append(zero_or_more)
+                new_state = _dup(state)
+                zero_or_more = OpNode(
+                    char=Symbols.ZERO_OR_MORE,
+                    out=[new_state, EOF])
+                _combine(new_state, zero_or_more)
 
+                if node.start > 0:
+                    _combine(curr, zero_or_more)
+                else:
+                    first = zero_or_more
+
+                states.append(first)
                 continue
 
-            # a{2} -> aa
-            # a{2,2} -> aa
             # a{1,2} -> aa?
             # a{,2} -> a?a?
             if node.end is not None:
+                assert node.start < node.end
+
+                zero_or_one = OpNode(
+                    char=Symbols.ZERO_OR_ONE,
+                    out=[_dup(state), EOF])
+
                 if node.start > 0:
-                    zero_or_one_ = OpNode(
-                        char=Symbols.ZERO_OR_ONE,
-                        out=[_dup(state), EOF])
-                    _combine(curr, zero_or_one_)
-                    curr = zero_or_one_
-
-                    for _ in range(node.start, node.end - 1):
-                        zero_or_one = OpNode(
-                            char=Symbols.ZERO_OR_ONE,
-                            out=[_dup(state), EOF])
-                        _combine(curr, zero_or_one)
-                        curr = zero_or_one
-
-                    states.append(fixed)
+                    _combine(curr, zero_or_one)
                 else:
-                    zero_or_one_ = OpNode(
+                    first = zero_or_one
+
+                curr = zero_or_one
+
+                for _ in range(node.start, node.end - 1):
+                    zero_or_one = OpNode(
                         char=Symbols.ZERO_OR_ONE,
                         out=[_dup(state), EOF])
-                    curr = zero_or_one_
+                    _combine(curr, zero_or_one)
+                    curr = zero_or_one
 
-                    for _ in range(node.start, node.end - 1):
-                        zero_or_one = OpNode(
-                            char=Symbols.ZERO_OR_ONE,
-                            out=[_dup(state), EOF])
-                        _combine(curr, zero_or_one)
-                        curr = zero_or_one
-
-                    states.append(zero_or_one_)
-
+                states.append(first)
                 continue
 
-            raise ValueError('Bad op: %s' % repr(node))
+            assert False, 'Bad op: %s' % repr(node)
 
-        raise ValueError('Unhandled node: %s' % repr(node))
+        assert False, 'Unhandled node: %s' % repr(node)
 
     assert len(states) == 1
 
