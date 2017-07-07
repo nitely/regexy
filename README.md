@@ -28,6 +28,7 @@ Mostly based on Thompson's NFA.
 - [ ] Named capturing groups
 - [ ] Sets complement
 - [ ] Match any (dot)
+- [ ] Greedy and non-greedy match
 - [ ] ... ?
 
 ## Compatibility
