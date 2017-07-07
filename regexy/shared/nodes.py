@@ -8,7 +8,11 @@ the node types of the NFA
 :private:
 """
 
-from typing import Sequence
+from typing import (
+    Sequence,
+    Callable,
+    Iterator,
+    Tuple)
 
 __all__ = [
     'Node',
@@ -16,7 +20,11 @@ __all__ = [
     'SymbolNode',
     'OpNode',
     'GroupNode',
-    'EOF']
+    'EOF',
+    'SetNode',
+    'ShorthandNode',
+    'AlphaNumNode',
+    'DigitNode']
 
 
 class Node:
@@ -31,7 +39,7 @@ class Node:
         self.char = char
         self.out = out
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return repr((self.char, self.out))
 
 
@@ -69,7 +77,7 @@ class GroupNode(SymbolNode):
     A node for capturing groups (start/end)
 
     :ivar index: group index
-    :ivar bool: denotes whether the capture\
+    :ivar is_repeated: denotes whether the capture\
     has repetition or not
     :private:
     """
@@ -78,10 +86,20 @@ class GroupNode(SymbolNode):
             index: int=None,
             is_repeated: bool=False,
             *args,
-            **kwargs):
+            **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.index = index
         self.is_repeated = is_repeated
+
+
+class RepetitionRangeNode(OpNode):
+
+    # todo: char should print as {start, end}
+
+    def __init__(self, start: int, end: int=None, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.start = start
+        self.end = end
 
 
 class ShorthandNode(CharNode):
@@ -90,20 +108,20 @@ class ShorthandNode(CharNode):
 
 class CharMatcher:
 
-    def __init__(self, char, compare):
+    def __init__(self, char: str, compare: Callable[[str], bool]) -> None:
         self.char = '\\%s' % char
         self.compare = compare
 
-    def __eq__(self, other):
+    def __eq__(self, other: str) -> bool:
         return self.compare(other)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.char
 
 
 class AlphaNumNode(ShorthandNode):
-    """"""
-    def __init__(self, char, *args, **kwargs):
+
+    def __init__(self, char: str, *args, **kwargs) -> None:
         super().__init__(
             char=CharMatcher(char=char, compare=lambda c: c.isalnum()),
             *args,
@@ -111,8 +129,8 @@ class AlphaNumNode(ShorthandNode):
 
 
 class DigitNode(ShorthandNode):
-    """"""
-    def __init__(self, char, *args, **kwargs):
+
+    def __init__(self, char: str, *args, **kwargs) -> None:
         super().__init__(
             char=CharMatcher(char=char, compare=lambda c: c.isdigit()),
             *args,
@@ -121,19 +139,23 @@ class DigitNode(ShorthandNode):
 
 class SetMatcher:
 
-    def __init__(self, chars, ranges, shorthands):
+    def __init__(
+            self,
+            chars: Iterator[str],
+            ranges: Iterator[Tuple[str, str]],
+            shorthands: Iterator[CharMatcher]) -> None:
         self._chars = set(chars)
         self._ranges = list(ranges)  # todo: interval tree
         self._shorthands = list(shorthands)
 
-    def __eq__(self, other):
+    def __eq__(self, other: str) -> bool:
         return (
             other in self._chars or
             any(start <= other <= end
                 for start, end in self._ranges) or
             other in self._shorthands)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '[%s%s%s]' % (
             ''.join(sorted(self._chars)),
             ''.join(
@@ -145,7 +167,14 @@ class SetMatcher:
 
 
 class SetNode(CharNode):
-    def __init__(self, chars, ranges, shorthands, *args, **kwargs):
+
+    def __init__(
+            self,
+            chars: Iterator[str],
+            ranges: Iterator[Tuple[str, str]],
+            shorthands: Iterator[CharMatcher],
+            *args,
+            **kwargs) -> None:
         super().__init__(
             char=SetMatcher(chars, ranges, shorthands),
             *args,

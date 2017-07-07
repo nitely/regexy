@@ -16,7 +16,8 @@ from .nodes import (
     ShorthandNode,
     AlphaNumNode,
     DigitNode,
-    SetNode)
+    SetNode,
+    RepetitionRangeNode)
 from . import exceptions
 
 
@@ -29,4 +30,9 @@ __all__ = [
     'GroupNode',
     'EOFNode',
     'EOF',
+    'ShorthandNode',
+    'AlphaNumNode',
+    'DigitNode',
+    'SetNode',
+    'RepetitionRangeNode',
     'exceptions']
