@@ -150,45 +150,58 @@ def nfa(nodes: Iterator[Node]) -> Node:
         if node.char == Symbols.REPETITION_RANGE:
             assert isinstance(node, RepetitionRangeNode)
 
-            # a{2} -> aa
-            # a{2,2} -> aa
-            if node.start == node.end:
-                state = states.pop()
-                curr = state
-
-                for _ in range(node.end - 1):
-                    new_state = _dup(curr)
-                    _combine(curr, new_state)
-                    curr = new_state
-
-                states.append(state)
+            if (node.start, node.end) == (0, 0):
+                states.pop()
+                # todo: SkipNode ?
+                states.append(Node(char='', out=[EOF]))
                 continue
 
-            # a{1,2} -> aa?
-            # a{,2} -> a?a?
-            if node.end is not None:
-                state = states.pop()
-                curr = state
+            # todo: refactor
 
+            state = states.pop()
+            curr = state
+
+            # a{1,...} -> a...
+            # a{2,...} -> aa...
+            if node.start > 0:
                 for _ in range(node.start - 1):
                     new_state = _dup(curr)
                     _combine(curr, new_state)
                     curr = new_state
 
+            # a{1,} -> aa*
+            # a{,} -> a*
+            if node.end is None:
+                new_state = _dup(curr)
+                zero_or_more = OpNode(
+                    char=Symbols.ZERO_OR_MORE,
+                    out=[new_state, EOF])
+                _combine(new_state, zero_or_more)
+                _combine(curr, zero_or_more)
+
+                if node.start > 0:
+                    states.append(state)
+                else:
+                    states.append(zero_or_more)
+
+                continue
+
+            # a{2} -> aa
+            # a{2,2} -> aa
+            # a{1,2} -> aa?
+            # a{,2} -> a?a?
+            if node.end is not None:
                 for _ in range(node.start, node.end):
-                    new_state = OpNode(
+                    new_state = _dup(curr)
+                    _combine(curr, OpNode(
                         char=Symbols.ZERO_OR_ONE,
-                        out=[_dup(curr), EOF])
-                    _combine(curr, new_state)
+                        out=[new_state, EOF]))
                     curr = new_state
 
                 states.append(state)
                 continue
 
-            # a{1,} -> aa*
-            # a{,} -> a*
-
-            continue
+            raise ValueError('Bad op: %s' % repr(node))
 
         raise ValueError('Unhandled node: %s' % repr(node))
 
