@@ -86,6 +86,18 @@ regexy.match(regexy.compile(r'(\w+| +)*'), stream_gen())
 # (('Im', ' ', 'a', ' ', 'stream'),)
 ```
 
+If you want to collaborate to the project or just want
+to add some operator, symbol or whatever to the regex
+syntax there is a (undocumented) way to print the generated NFA:
+
+```python
+import regexy
+
+print(regexy.compile(r'a*').state)
+# ('*', [('a', [('*', [...])]), ('EOF', [])])
+# The [...] thing means it's recursive
+```
+
 
 # Docs
 
