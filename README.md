@@ -88,7 +88,8 @@ regexy.match(regexy.compile(r'(\w+| +)*'), stream_gen())
 
 If you want to collaborate to the project or just want
 to add some operator, symbol or whatever to the regex
-syntax there is a (undocumented) way to print the generated NFA:
+syntax there is a (undocumented) way to print the generated
+NFA for debugging purposes:
 
 ```python
 import regexy
