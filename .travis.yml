@@ -3,6 +3,10 @@ language: python
 # Use container-based infrastructure
 sudo: false
 
+notifications:
+  email:
+    on_success: never
+
 python:
   - "3.5"
 
