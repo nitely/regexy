@@ -181,6 +181,19 @@ class SetNode(CharNode):
             **kwargs)
 
 
+class SkipNode(Node):
+    """
+    A node that should be skipped.\
+    Very useful when the regex\
+    expression is empty
+
+    :private:
+    """
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(char='', *args, **kwargs)
+
+
 class EOFNode(Node):
     """
     A node for End Of File.\

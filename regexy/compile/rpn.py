@@ -16,12 +16,12 @@ from typing import (
     Iterator,
     List)
 
-from ..shared import (
-    Symbols,
+from ..shared.nodes import (
     CharNode,
     Node,
     SymbolNode,
     OpNode)
+from ..shared import Symbols
 
 
 __all__ = ['rpn']

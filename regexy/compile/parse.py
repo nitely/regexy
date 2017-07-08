@@ -10,16 +10,16 @@ from typing import (
     Iterator,
     List)
 
-from ..shared import (
+from ..shared.nodes import (
     Node,
     OpNode,
     GroupNode,
     CharNode,
-    Symbols,
     AlphaNumNode,
     DigitNode,
     SetNode,
     RepetitionRangeNode)
+from ..shared import Symbols
 
 
 __all__ = [

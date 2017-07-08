@@ -13,12 +13,12 @@ from typing import (
     Union,
     Set)
 
-from ..shared import (
+from ..shared.nodes import (
     EOF,
     CharNode,
     GroupNode,
-    Node,
-    exceptions)
+    Node)
+from ..shared import exceptions
 from ..compile.compile import NFA
 from . import captures
 from .captures import (

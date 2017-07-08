@@ -47,6 +47,7 @@ class RegexyTest(unittest.TestCase):
         self.assertIsNotNone(match('a**', 'aaa'))
         self.assertIsNotNone(match('(a*)*', 'aaa'))
         self.assertIsNotNone(match('((a*|b*))*', 'aaabbbaaa'))
+        self.assertIsNotNone(match('a*{,}', 'aaa'))
 
     def test_captures(self):
         self.assertEqual(match('(a)b', 'ab'), ('a',))
@@ -305,3 +306,7 @@ class RegexyTest(unittest.TestCase):
         self.assertEqual(
             match(r'(a{1,})', 'aaa'),
             ('aaa',))
+
+        self.assertIsNotNone(match('a*{,}', 'aaa'))
+        self.assertIsNone(match('a*{0}', 'aaa'))
+        self.assertIsNotNone(match('a*{1}', 'aaa'))
