@@ -101,7 +101,7 @@ def _next_states(state: Node, captured: Capture, visited: Set[Node]) -> NextStat
         yield state, captured
         return
 
-    if isinstance(state, GroupNode):
+    if isinstance(state, GroupNode) and state.is_capturing:
         captured = captures.capture(
             char=state.char,
             prev=captured,
