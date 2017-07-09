@@ -25,6 +25,16 @@ __all__ = ['nfa']
 
 
 def _dup(state: Node, visited: set=None) -> Node:
+    """
+    Recursively shallow copy state and its connected states
+
+    Return the copy of the given state (root)
+
+    :param state: the root or state to copy
+    :param visited: a record of states to avoid cycles
+    :return: shallow copy of the root state
+    :private:
+    """
     assert isinstance(state, Node)
 
     visited = visited or set()
@@ -156,6 +166,7 @@ def nfa(nodes: Iterator[Node]) -> Node:
             states.append(state)
             continue
 
+        # todo: refactor!
         if node.char == Symbols.REPETITION_RANGE:
             assert isinstance(node, RepetitionRangeNode)
 
