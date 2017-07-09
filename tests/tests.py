@@ -313,6 +313,9 @@ class RegexyTest(unittest.TestCase):
         self.assertIsNone(match('a*{0}', 'aaa'))
         self.assertIsNotNone(match('a*{1}', 'aaa'))
 
+    def test_circular_repetition(self):
+        self.assertIsNotNone(match(r'((a)*(a)*)*', 'a' * 100))
+
     def test_non_capturing_groups(self):
         self.assertEqual(
             match(r'(?:a)', 'a'), ())
@@ -321,9 +324,16 @@ class RegexyTest(unittest.TestCase):
         # (a(b))* -> ((ab, ab), (b, b))
         # (?:a(b))* -> ((b, b), )
         # (a(?:b))* -> ((ab, ab), )
+        # (a(b(c)))* -> ((abc, abc), (bc, bc), (c, c))
+        # (a(b)*)* -> ((abb, abb), ((b, b), (b, b)))
+        # (a(b(c)*)*)* -> ((abbcc, abbcc), ((b, bcc), (b, bcc)), ((None, (c, c)), (None, (c, c))))
         self.assertEqual(
             match(r'(a(b))*', 'abab'), (('ab', 'ab'), 'bb'))  # fixme
         self.assertEqual(
             match(r'(?:a(b))*', 'abab'), ('bb',))  # fixme ^
         self.assertEqual(
             match(r'(a(?:b))*', 'abab'), (('ab', 'ab'), ))
+        # self.assertIsNotNone(match(r'(\))', ')'))  # fixme
+
+        # self.assertIsNone(match(r'((a)*n?(asd))*', 'aaanasdnasd'))  # fixme
+        # should be equal to r'((a)*n?(asd)*)*' (see last capture)

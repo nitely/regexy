@@ -43,7 +43,7 @@ Capture.__doc__ = """
 
     There is no distinction between a matched\
     char and start/end group, except the group\
-    must has an index and the repeated flag set
+    must have an index and the repeated flag set
 
     :ivar str char: matched char
     :ivar Capture prev: previous captured char
@@ -105,9 +105,9 @@ def matched(captured: Optional[Capture], groups_count: int) -> MatchedType:
     The passed Capture has the last captured char\
     and so the sequence is transversed in reverse
 
-    Matches are put in their group index
+    Sub-matches are put in their group index
 
-    Sub-matches (repeating groups) are put\
+    Repeating sub-matches (i.e: ``(a)*``) are put\
     into a nested sequence of their group index
 
     :param captured: The last capture or None
