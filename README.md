@@ -29,6 +29,9 @@ Mostly based on Thompson's NFA.
 - [ ] Sets complement
 - [ ] Match any (dot)
 - [ ] Greedy and non-greedy match
+- [ ] Search
+- [ ] `^` and `$` symbols
+- [ ] User friendly compiling errors
 - [ ] ... ?
 
 ## Compatibility
