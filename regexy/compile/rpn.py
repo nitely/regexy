@@ -83,9 +83,9 @@ def _has_precedence(a: str, b: str) -> bool:
     """
     return (
         (OPS[b].associativity == Associativity.RIGHT and
-         OPS[b].precedence < OPS[a].precedence) or
+         OPS[b].precedence <= OPS[a].precedence) or
         (OPS[b].associativity == Associativity.LEFT and
-         OPS[b].precedence <= OPS[a].precedence))
+         OPS[b].precedence < OPS[a].precedence))
 
 
 def _pop_greater_than(ops: List[SymbolNode], op: OpNode) -> Iterator[SymbolNode]:
