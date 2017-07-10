@@ -24,7 +24,7 @@ Mostly based on Thompson's NFA.
 - [x] Shorthands: `\w` and `\d`
 - [x] Sets `[...]` (+ ranges and shorthands)
 - [x] Repetition ranges `{n, m}`
-- [ ] non-capturing groups
+- [x] non-capturing groups
 - [ ] Named capturing groups
 - [ ] Sets complement
 - [ ] Match any (dot)
@@ -86,15 +86,13 @@ regexy.match(regexy.compile(r'(\w+| +)*'), stream_gen())
 # (('Im', ' ', 'a', ' ', 'stream'),)
 ```
 
-If you want to collaborate to the project or just want
-to add some operator, symbol or whatever to the regex
-syntax there is a (undocumented) way to print the generated
+Here is a (undocumented) way to print the generated
 NFA for debugging purposes:
 
 ```python
 import regexy
 
-print(regexy.compile(r'a*').state)
+str(regexy.compile(r'a*').state)
 # ('*', [('a', [('*', [...])]), ('EOF', [])])
 # The [...] thing means it's recursive
 ```
