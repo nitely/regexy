@@ -10,16 +10,16 @@ from typing import (
     Iterator,
     List)
 
-from ..shared import (
+from ..shared.nodes import (
     Node,
     OpNode,
     GroupNode,
     CharNode,
-    Symbols,
     AlphaNumNode,
     DigitNode,
     SetNode,
     RepetitionRangeNode)
+from ..shared import Symbols
 
 
 __all__ = [
@@ -40,8 +40,7 @@ SYMBOLS = {
 
 SHORTHANDS = {
     'w': AlphaNumNode,
-    'd': DigitNode
-}
+    'd': DigitNode}
 
 
 def parse_set(set_expression: Iterator[str]) -> SetNode:
@@ -143,12 +142,16 @@ def parse(expression: str) -> Iterator[Node]:
     :private:
     """
     is_escaped = False
+    is_sub_parsing = False
 
     is_set = False
     set_start = 0
 
     is_repetition_range = False
     repetition_range_tart = 0
+
+    is_group_tag = False
+    group_tag_start = 0
 
     for index, char in enumerate(expression):
         if char == ']' and not is_escaped and set_start < index:
@@ -182,6 +185,27 @@ def parse(expression: str) -> Iterator[Node]:
             repetition_range_tart = index + 1
             continue
 
+        if is_group_tag:
+            if group_tag_start == index:
+                continue
+
+            is_group_tag = False
+            group_tag = expression[group_tag_start:index + 1]
+
+            if group_tag == '?:':
+                yield GroupNode(
+                    char=Symbols.GROUP_START,
+                    is_capturing=False)
+                continue
+
+            assert False, 'unsupported group tag %s' % group_tag
+
+        if char == '(' and expression[index + 1] == '?' and not is_escaped:
+            assert not is_group_tag
+            is_group_tag = True
+            group_tag_start = index + 1
+            continue
+
         if is_escaped:
             is_escaped = False
             yield SHORTHANDS.get(char, CharNode)(char=char)
@@ -196,6 +220,7 @@ def parse(expression: str) -> Iterator[Node]:
     assert not is_escaped
     assert not is_set
     assert not is_repetition_range
+    assert not is_group_tag
 
 
 def fill_groups(nodes: List[Node]) -> int:
@@ -214,31 +239,43 @@ def fill_groups(nodes: List[Node]) -> int:
     """
     groups_count = 0
     groups = []
+    groups_non_capt = []
 
     for index, node in enumerate(nodes):
         if isinstance(node, CharNode):
-            node.is_captured = bool(groups)
+            node.is_captured = len(groups) - len(groups_non_capt) > 0
             continue
 
         if node.char == Symbols.GROUP_START:
+            assert isinstance(node, GroupNode)
+
+            if not node.is_capturing:
+                groups_non_capt.append(node)
+                groups.append(node)
+                continue
+
             node.index = groups_count
-            groups.append(node)
             groups_count += 1
+            groups.append(node)
             continue
 
         if node.char == Symbols.GROUP_END:
+            start = groups.pop()
+
+            if not start.is_capturing:
+                groups_non_capt.pop()
+                node.is_capturing = False
+                continue
+
             try:
                 next_node = nodes[index + 1]
             except IndexError:
-                is_repeated = False
+                start.is_repeated = False
             else:
-                is_repeated = next_node.char in (
+                start.is_repeated = next_node.char in (
                     Symbols.ZERO_OR_MORE,
                     Symbols.ONE_OR_MORE,
                     Symbols.REPETITION_RANGE)
-
-            start = groups.pop()
-            start.is_repeated = is_repeated
 
             node.index = start.index
             node.is_repeated = start.is_repeated

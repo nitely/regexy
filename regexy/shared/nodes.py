@@ -85,11 +85,13 @@ class GroupNode(SymbolNode):
             self,
             index: int=None,
             is_repeated: bool=False,
+            is_capturing: bool=True,
             *args,
             **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.index = index
         self.is_repeated = is_repeated
+        self.is_capturing = is_capturing
 
 
 class RepetitionRangeNode(OpNode):
@@ -179,6 +181,19 @@ class SetNode(CharNode):
             char=SetMatcher(chars, ranges, shorthands),
             *args,
             **kwargs)
+
+
+class SkipNode(Node):
+    """
+    A node that should be skipped.\
+    Very useful when the regex\
+    expression is empty
+
+    :private:
+    """
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(char='', *args, **kwargs)
 
 
 class EOFNode(Node):

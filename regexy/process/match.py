@@ -13,12 +13,12 @@ from typing import (
     Union,
     Set)
 
-from ..shared import (
+from ..shared.nodes import (
     EOF,
     CharNode,
     GroupNode,
-    Node,
-    exceptions)
+    Node)
+from ..shared import exceptions
 from ..compile.compile import NFA
 from . import captures
 from .captures import (
@@ -35,6 +35,9 @@ class OrderedSet:
         self._list = []
         self._set = set()
 
+    def __len__(self):
+        return len(self._set)
+
     def __bool__(self):
         return bool(self._list)
 
@@ -42,12 +45,13 @@ class OrderedSet:
         yield from self._list
 
     def extend(self, items):
+        # todo: split state list and captured list?
         items = tuple(
             item
             for item in items
-            if item not in self._set)
+            if item[0] not in self._set)
         self._list.extend(items)
-        self._set.update(items)
+        self._set.update(item[0] for item in items)
 
     def clear(self):
         self._list.clear()
@@ -101,7 +105,7 @@ def _next_states(state: Node, captured: Capture, visited: Set[Node]) -> NextStat
         yield state, captured
         return
 
-    if isinstance(state, GroupNode):
+    if isinstance(state, GroupNode) and state.is_capturing:
         captured = captures.capture(
             char=state.char,
             prev=captured,

@@ -11,19 +11,30 @@ from typing import (
     Iterator,
     Tuple)
 
-from ..shared import (
+from ..shared.nodes import (
     Node,
     EOF,
     CharNode,
-    Symbols,
     RepetitionRangeNode,
-    OpNode)
+    OpNode,
+    SkipNode)
+from ..shared import Symbols
 
 
 __all__ = ['nfa']
 
 
 def _dup(state: Node, visited: set=None) -> Node:
+    """
+    Recursively shallow copy state and its connected states
+
+    Return the copy of the given state (root)
+
+    :param state: the root or state to copy
+    :param visited: a record of states to avoid cycles
+    :return: shallow copy of the root state
+    :private:
+    """
     assert isinstance(state, Node)
 
     visited = visited or set()
@@ -89,6 +100,8 @@ def nfa(nodes: Iterator[Node]) -> Node:
     so leaf nodes are the only nodes containing an EOF\
     in the resulting NFA
 
+    Repetition range operators are expanded (i.e: a{1,} -> aa*)
+
     :param nodes: an iterator of nodes\
     to be converted into a NFA
     :return: the NFA first state/node
@@ -98,7 +111,7 @@ def nfa(nodes: Iterator[Node]) -> Node:
     nodes = tuple(nodes)  # type: Tuple[Node]
 
     if not nodes:
-        return Node(char='', out=[EOF])
+        return SkipNode(out=[EOF])
 
     for node in nodes:
         if isinstance(node, CharNode):
@@ -153,6 +166,7 @@ def nfa(nodes: Iterator[Node]) -> Node:
             states.append(state)
             continue
 
+        # todo: refactor!
         if node.char == Symbols.REPETITION_RANGE:
             assert isinstance(node, RepetitionRangeNode)
 
@@ -173,8 +187,7 @@ def nfa(nodes: Iterator[Node]) -> Node:
             # a{2} -> aa
             # a{2,2} -> aa
             if node.start == node.end:
-                # todo: SkipNode
-                states.append(first or Node(char='', out=[EOF]))
+                states.append(first or SkipNode(out=[EOF]))
                 continue
 
             # a{1,} -> aa*
