@@ -149,9 +149,19 @@ def nfa(nodes: Iterator[Node]) -> Node:
 
         if node.char == Symbols.ZERO_OR_ONE:
             state = states.pop()
-            node.out = [state, EOF]
-            states.append(node)
-            continue
+
+            # todo: refactor the whole thing. Move repetition range to parse.py
+            # todo: add non-greedy symbols
+            if state.char in (
+                    Symbols.ZERO_OR_MORE,
+                    Symbols.ZERO_OR_ONE):
+                state.out = list(reversed(state.out))
+                states.append(state)
+                continue
+            else:
+                node.out = [state, EOF]
+                states.append(node)
+                continue
 
         if node.char == Symbols.GROUP_START:
             state = states.pop()
