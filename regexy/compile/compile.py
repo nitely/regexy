@@ -97,4 +97,3 @@ def to_atoms(expression: str) -> str:
     return ''.join(
         str(node.char)
         for node in join_atoms(parse(expression)))
-

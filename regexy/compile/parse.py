@@ -8,7 +8,8 @@ Tools to parse a regular expression into nodes
 
 from typing import (
     Iterator,
-    List)
+    List,
+    Tuple)
 
 from ..shared.nodes import (
     Node,
@@ -43,7 +44,7 @@ SHORTHANDS = {
     'd': DigitNode}
 
 
-def parse_set(set_expression: Iterator[str]) -> SetNode:
+def parse_set(expression: Iterator[Tuple[str, str]], *args) -> SetNode:
     """
     Parse a set atom (``[...]``) into a SetNode
 
@@ -51,13 +52,19 @@ def parse_set(set_expression: Iterator[str]) -> SetNode:
     :return: a set node to match against (like any other char node)
     :private:
     """
+    char = ''
     chars = []
     ranges = []
     shorthands = []
     is_range = False
     is_escaped = False
 
-    for char in set_expression:
+    for char, _nxt in expression:
+        if (char == ']' and
+                not is_escaped and
+                (chars or ranges or shorthands)):
+            break
+
         if char == '\\' and not is_escaped:
             is_escaped = True
             continue
@@ -86,11 +93,12 @@ def parse_set(set_expression: Iterator[str]) -> SetNode:
 
         chars.append(char)
 
-    assert not is_escaped
-    assert chars or ranges or shorthands
-
     if is_range:
         chars.append('-')
+
+    assert not is_escaped
+    assert chars or ranges or shorthands
+    assert char == ']'
 
     return SetNode(
         chars=chars,
@@ -98,13 +106,15 @@ def parse_set(set_expression: Iterator[str]) -> SetNode:
         shorthands=shorthands)
 
 
-def parse_repetition_range(range_expression):
+def parse_repetition_range(expression: Iterator[Tuple[str, str]], *args) -> Node:
     start = []
     end = []
-
     curr = start
 
-    for char in range_expression:
+    for char, _nxt in expression:
+        if char == '}':
+            break
+
         if char == ',':
             assert curr == start
             curr = end
@@ -119,7 +129,7 @@ def parse_repetition_range(range_expression):
     start = int(''.join(start) or 0)
 
     if end:
-        end = int(''.join(end))
+        end = int(''.join(end) or 0)
     else:
         end = None
 
@@ -127,6 +137,40 @@ def parse_repetition_range(range_expression):
         char=Symbols.REPETITION_RANGE,
         start=start,
         end=end)
+
+
+def parse_group_tag(expression: Iterator[Tuple[str, str]], next_char: str) -> Node:
+    if next_char != '?':
+        return SYMBOLS.get('(', CharNode)(char='(')
+
+    # At the moment this is just for non-capturing group
+    _chr, next_char = next(expression)
+    assert next_char == ':'
+    next(expression)
+    return GroupNode(
+        char=Symbols.GROUP_START,
+        is_capturing=False)
+
+
+SUB_PARSERS = {
+    '[': parse_set,
+    '{': parse_repetition_range,
+    '(': parse_group_tag}
+
+
+def _peek(iterator, eof=None):
+    iterator = iter(iterator)
+
+    try:
+        prev = next(iterator)
+    except StopIteration:
+        return iterator
+
+    for elm in iterator:
+        yield prev, elm
+        prev = elm
+
+    yield prev, eof
 
 
 def parse(expression: str) -> Iterator[Node]:
@@ -141,71 +185,10 @@ def parse(expression: str) -> Iterator[Node]:
     :return: iterator of nodes
     :private:
     """
+    expression = _peek(iter(expression))
     is_escaped = False
-    is_sub_parsing = False
 
-    is_set = False
-    set_start = 0
-
-    is_repetition_range = False
-    repetition_range_tart = 0
-
-    is_group_tag = False
-    group_tag_start = 0
-
-    for index, char in enumerate(expression):
-        if char == ']' and not is_escaped and set_start < index:
-            assert is_set
-            is_set = False
-            yield parse_set(expression[set_start:index])
-            continue
-
-        if is_set:
-            is_escaped = char == '\\' and not is_escaped
-            continue
-
-        if char == '[' and not is_escaped:
-            assert not is_set
-            is_set = True
-            set_start = index + 1
-            continue
-
-        if char == '}' and not is_escaped:
-            assert is_repetition_range
-            is_repetition_range = False
-            yield parse_repetition_range(expression[repetition_range_tart:index])
-            continue
-
-        if is_repetition_range:
-            continue
-
-        if char == '{' and not is_escaped:
-            assert not is_repetition_range
-            is_repetition_range = True
-            repetition_range_tart = index + 1
-            continue
-
-        if is_group_tag:
-            if group_tag_start == index:
-                continue
-
-            is_group_tag = False
-            group_tag = expression[group_tag_start:index + 1]
-
-            if group_tag == '?:':
-                yield GroupNode(
-                    char=Symbols.GROUP_START,
-                    is_capturing=False)
-                continue
-
-            assert False, 'unsupported group tag %s' % group_tag
-
-        if char == '(' and expression[index + 1] == '?' and not is_escaped:
-            assert not is_group_tag
-            is_group_tag = True
-            group_tag_start = index + 1
-            continue
-
+    for char, next_char in expression:
         if is_escaped:
             is_escaped = False
             yield SHORTHANDS.get(char, CharNode)(char=char)
@@ -215,12 +198,13 @@ def parse(expression: str) -> Iterator[Node]:
             is_escaped = True
             continue
 
+        if char in SUB_PARSERS:
+            yield SUB_PARSERS[char](expression, next_char)
+            continue
+
         yield SYMBOLS.get(char, CharNode)(char=char)
 
     assert not is_escaped
-    assert not is_set
-    assert not is_repetition_range
-    assert not is_group_tag
 
 
 def fill_groups(nodes: List[Node]) -> int:
