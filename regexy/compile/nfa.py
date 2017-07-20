@@ -24,7 +24,7 @@ from ..shared import Symbols
 __all__ = ['nfa']
 
 
-def _dup(state: Node, visited: set=None) -> Node:
+def _dup(state: Node, visited: set) -> Node:
     """
     Recursively shallow copy state and its connected states
 
@@ -36,8 +36,6 @@ def _dup(state: Node, visited: set=None) -> Node:
     :private:
     """
     assert isinstance(state, Node)
-
-    visited = visited or set()
 
     if state in visited:
         return state
@@ -56,7 +54,11 @@ def _dup(state: Node, visited: set=None) -> Node:
     return state_copy
 
 
-def _combine(origin_state: Node, target_state: Node, visited: set=None) -> None:
+def dup(state: Node) -> Node:
+    return _dup(state=state, visited=set())
+
+
+def _combine(origin_state: Node, target_state: Node, visited: set) -> None:
     """
     Set all state ends to the target state
 
@@ -75,8 +77,6 @@ def _combine(origin_state: Node, target_state: Node, visited: set=None) -> None:
     assert isinstance(origin_state, Node)
     assert isinstance(target_state, Node)
 
-    visited = visited or set()
-
     if origin_state in visited:
         return
 
@@ -87,6 +87,10 @@ def _combine(origin_state: Node, target_state: Node, visited: set=None) -> None:
             origin_state.out[i] = target_state
         else:
             _combine(state, target_state, visited)
+
+
+def combine(origin_state: Node, target_state: Node) -> None:
+    _combine(origin_state, target_state, visited=set())
 
 
 def nfa(nodes: Iterator[Node]) -> Node:
@@ -122,7 +126,7 @@ def nfa(nodes: Iterator[Node]) -> Node:
         if node.char == Symbols.JOINER:
             state_b = states.pop()
             state_a = states.pop()
-            _combine(state_a, state_b)
+            combine(state_a, state_b)
             states.append(state_a)
             continue
 
@@ -136,32 +140,34 @@ def nfa(nodes: Iterator[Node]) -> Node:
         if node.char == Symbols.ZERO_OR_MORE:
             state = states.pop()
             node.out = [state, EOF]
-            _combine(state, node)
+
+            if node.is_greedy:
+                node.out.reverse()
+
+            combine(state, node)
             states.append(node)
             continue
 
         if node.char == Symbols.ONE_OR_MORE:
             state = states.pop()
             node.out = [state, EOF]
-            _combine(state, node)
+
+            if node.is_greedy:
+                node.out.reverse()
+
+            combine(state, node)
             states.append(state)
             continue
 
         if node.char == Symbols.ZERO_OR_ONE:
             state = states.pop()
+            node.out = [state, EOF]
 
-            # todo: refactor the whole thing. Move repetition range to parse.py
-            # todo: add non-greedy symbols
-            if state.char in (
-                    Symbols.ZERO_OR_MORE,
-                    Symbols.ZERO_OR_ONE):
-                state.out = list(reversed(state.out))
-                states.append(state)
-                continue
-            else:
-                node.out = [state, EOF]
-                states.append(node)
-                continue
+            if node.is_greedy:
+                node.out.reverse()
+
+            states.append(node)
+            continue
 
         if node.char == Symbols.GROUP_START:
             state = states.pop()
@@ -172,11 +178,11 @@ def nfa(nodes: Iterator[Node]) -> Node:
         if node.char == Symbols.GROUP_END:
             state = states.pop()
             node.out = [EOF]
-            _combine(state, node)
+            combine(state, node)
             states.append(state)
             continue
 
-        # todo: refactor!
+        # todo: refactor! move to parse
         if node.char == Symbols.REPETITION_RANGE:
             assert isinstance(node, RepetitionRangeNode)
 
@@ -184,12 +190,12 @@ def nfa(nodes: Iterator[Node]) -> Node:
             first = None
 
             if node.start > 0:
-                first = _dup(state)
+                first = dup(state)
                 curr = first
 
                 for _ in range(node.start - 1):
-                    new_state = _dup(state)
-                    _combine(curr, new_state)
+                    new_state = dup(state)
+                    combine(curr, new_state)
                     curr = new_state
 
             # a{0} ->
@@ -203,14 +209,18 @@ def nfa(nodes: Iterator[Node]) -> Node:
             # a{1,} -> aa*
             # a{,} -> a*
             if node.end is None:
-                new_state = _dup(state)
+                new_state = dup(state)
                 zero_or_more = OpNode(
                     char=Symbols.ZERO_OR_MORE,
                     out=[new_state, EOF])
-                _combine(new_state, zero_or_more)
+
+                if node.is_greedy:
+                    zero_or_more.out.reverse()
+
+                combine(new_state, zero_or_more)
 
                 if first:
-                    _combine(first, zero_or_more)
+                    combine(first, zero_or_more)
 
                 states.append(first or zero_or_more)
                 continue
@@ -222,18 +232,26 @@ def nfa(nodes: Iterator[Node]) -> Node:
 
                 zero_or_one = OpNode(
                     char=Symbols.ZERO_OR_ONE,
-                    out=[_dup(state), EOF])
+                    out=[dup(state), EOF])
+
+                if zero_or_one.is_greedy:
+                    zero_or_one.out.reverse()
+
                 curr = zero_or_one
 
                 for _ in range(node.start, node.end - 1):
                     zero_or_one_ = OpNode(
                         char=Symbols.ZERO_OR_ONE,
-                        out=[_dup(state), EOF])
-                    _combine(curr, zero_or_one_)
+                        out=[dup(state), EOF])
+
+                    if zero_or_one_.is_greedy:
+                        zero_or_one_.out.reverse()
+
+                    combine(curr, zero_or_one_)
                     curr = zero_or_one_
 
                 if first:
-                    _combine(first, zero_or_one)
+                    combine(first, zero_or_one)
 
                 states.append(first or zero_or_one)
                 continue

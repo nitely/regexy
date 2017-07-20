@@ -356,4 +356,35 @@ class RegexyTest(unittest.TestCase):
         self.assertEqual(match(r'(a)??(a)', 'aa'), ('a', 'a'))
         self.assertEqual(match(r'(a)??(aa?)', 'aa'), (None, 'aa'))
 
-        # print(to_nfa_str('(a)*?(a)*(a)*'))
+        self.assertEqual(
+            match(r'(a)+(a)+(a)?', 'aaa'),
+            (('a', 'a'), ('a',), None))
+        self.assertEqual(
+            match(r'(a)+?(a)+(a)?', 'aaa'),
+            (('a',), ('a', 'a'), None))
+        self.assertEqual(
+            match(r'(a)+?(a)+?(a)?', 'aaa'),
+            (('a',), ('a',), 'a'))
+
+        self.assertEqual(
+            match(r'(a){,}(a){,}(a){,}', 'aaa'),
+            (('a', 'a', 'a'), None, None))
+        self.assertEqual(
+            match(r'(a){,}?(a){,}(a){,}?', 'aaa'),
+            (None, ('a', 'a', 'a'), None))
+        self.assertEqual(
+            match(r'(a){,}?(a){,}?(a){,}', 'aaa'),
+            (None, None, ('a', 'a', 'a')))
+        self.assertEqual(
+            match(r'(a){,}?(a){,}?(a){,}?', 'aaa'),
+            (None, None, ('a', 'a', 'a')))
+
+        self.assertEqual(
+            match(r'(a){1,}(a){1,}(a)?', 'aaa'),
+            (('a', 'a'), ('a',), None))
+        self.assertEqual(
+            match(r'(a){1,}?(a){1,}(a)?', 'aaa'),
+            (('a',), ('a', 'a'), None))
+        self.assertEqual(
+            match(r'(a){1,}?(a){1,}?(a)?', 'aaa'),
+            (('a',), ('a',), 'a'))
