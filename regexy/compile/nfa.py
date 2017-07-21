@@ -58,6 +58,61 @@ def dup(state: Node) -> Node:
     return _dup(state=state, visited=set())
 
 
+def rep_range_fixed(node, state):
+    assert node.start > 0
+
+    first = dup(state)
+    curr = first
+
+    for _ in range(node.start - 1):
+        new_state = dup(state)
+        combine(curr, new_state)
+        curr = new_state
+
+    return first
+
+
+def rep_range_no_end(node, state):
+    assert node.end is None
+
+    new_state = dup(state)
+    zero_or_more = OpNode(
+        char=Symbols.ZERO_OR_MORE,
+        out=[new_state, EOF])
+
+    if node.is_greedy:
+        zero_or_more.out.reverse()
+
+    combine(new_state, zero_or_more)
+    return zero_or_more
+
+
+def rep_range_with_end(node, state):
+    assert node.start < node.end
+
+    zero_or_one = OpNode(
+        char=Symbols.ZERO_OR_ONE,
+        out=[dup(state), EOF])
+
+    if zero_or_one.is_greedy:
+        zero_or_one.out.reverse()
+
+    curr = zero_or_one
+
+    for _ in range(node.start, node.end - 1):
+        zero_or_one_ = OpNode(
+            char=Symbols.ZERO_OR_ONE,
+            out=[dup(state), EOF])
+
+        if zero_or_one_.is_greedy:
+            zero_or_one_.out.reverse()
+
+        combine(curr, zero_or_one_)
+        curr = zero_or_one_
+
+    return zero_or_one
+
+
 def _combine(origin_state: Node, target_state: Node, visited: set) -> None:
     """
     Set all state ends to the target state
@@ -182,7 +237,6 @@ def nfa(nodes: Iterator[Node]) -> Node:
             states.append(state)
             continue
 
-        # todo: refactor! move to parse
         if node.char == Symbols.REPETITION_RANGE:
             assert isinstance(node, RepetitionRangeNode)
 
@@ -190,73 +244,22 @@ def nfa(nodes: Iterator[Node]) -> Node:
             first = None
 
             if node.start > 0:
-                first = dup(state)
-                curr = first
+                first = rep_range_fixed(node, state)
 
-                for _ in range(node.start - 1):
-                    new_state = dup(state)
-                    combine(curr, new_state)
-                    curr = new_state
-
-            # a{0} ->
-            # a{0,0} ->
-            # a{2} -> aa
-            # a{2,2} -> aa
             if node.start == node.end:
                 states.append(first or SkipNode(out=[EOF]))
                 continue
 
-            # a{1,} -> aa*
-            # a{,} -> a*
             if node.end is None:
-                new_state = dup(state)
-                zero_or_more = OpNode(
-                    char=Symbols.ZERO_OR_MORE,
-                    out=[new_state, EOF])
+                end = rep_range_no_end(node, state)
+            else:
+                end = rep_range_with_end(node, state)
 
-                if node.is_greedy:
-                    zero_or_more.out.reverse()
+            if first:
+                combine(first, end)
 
-                combine(new_state, zero_or_more)
-
-                if first:
-                    combine(first, zero_or_more)
-
-                states.append(first or zero_or_more)
-                continue
-
-            # a{1,2} -> aa?
-            # a{,2} -> a?a?
-            if node.end is not None:
-                assert node.start < node.end
-
-                zero_or_one = OpNode(
-                    char=Symbols.ZERO_OR_ONE,
-                    out=[dup(state), EOF])
-
-                if zero_or_one.is_greedy:
-                    zero_or_one.out.reverse()
-
-                curr = zero_or_one
-
-                for _ in range(node.start, node.end - 1):
-                    zero_or_one_ = OpNode(
-                        char=Symbols.ZERO_OR_ONE,
-                        out=[dup(state), EOF])
-
-                    if zero_or_one_.is_greedy:
-                        zero_or_one_.out.reverse()
-
-                    combine(curr, zero_or_one_)
-                    curr = zero_or_one_
-
-                if first:
-                    combine(first, zero_or_one)
-
-                states.append(first or zero_or_one)
-                continue
-
-            assert False, 'Bad op: %s' % repr(node)
+            states.append(first or end)
+            continue
 
         assert False, 'Unhandled node: %s' % repr(node)
 
