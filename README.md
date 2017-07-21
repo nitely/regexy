@@ -25,10 +25,10 @@ Mostly based on Thompson's NFA.
 - [x] Sets `[...]` (+ ranges and shorthands)
 - [x] Repetition ranges `{n, m}`
 - [x] non-capturing groups
+- [x] Greedy and non-greedy match
 - [ ] Named capturing groups
 - [ ] Sets complement
 - [ ] Match any (dot)
-- [ ] Greedy and non-greedy match
 - [ ] Search
 - [ ] `^` and `$` symbols
 - [ ] User friendly compiling errors
