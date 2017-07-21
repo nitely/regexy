@@ -19,6 +19,7 @@ from ..shared.nodes import (
     GroupNode,
     Node)
 from ..shared import exceptions
+from ..shared.collections import StatesSet
 from ..compile.compile import NFA
 from . import captures
 from .captures import (
@@ -27,35 +28,6 @@ from .captures import (
 
 
 __all__ = ['match']
-
-
-class OrderedSet:
-
-    def __init__(self):
-        self._list = []
-        self._set = set()
-
-    def __len__(self):
-        return len(self._set)
-
-    def __bool__(self):
-        return bool(self._list)
-
-    def __iter__(self):
-        yield from self._list
-
-    def extend(self, items):
-        # todo: split state list and captured list?
-        items = tuple(
-            item
-            for item in items
-            if item[0] not in self._set)
-        self._list.extend(items)
-        self._set.update(item[0] for item in items)
-
-    def clear(self):
-        self._list.clear()
-        self._set.clear()
 
 
 def _get_match(states: List[Tuple[Node, Capture]]) -> Capture:
@@ -157,18 +129,18 @@ def match(nfa: NFA, text: str) -> Union[MatchedType, None]:
     :param text: a text to match against
     :return: match or ``None``
     """
-    curr_list = OrderedSet()
-    next_list = OrderedSet()
+    curr_states_set = StatesSet()
+    next_states_set = StatesSet()
 
-    curr_list.extend(curr_states(
+    curr_states_set.extend(curr_states(
         state=nfa.state,
         captured=None))
 
     for char in text:
-        if not curr_list:
+        if not curr_states_set:
             break
 
-        for curr_state, captured in curr_list:
+        for curr_state, captured in curr_states_set:
             if char != curr_state.char:
                 continue
 
@@ -177,15 +149,16 @@ def match(nfa: NFA, text: str) -> Union[MatchedType, None]:
                     char=char,
                     prev=captured)
 
-            next_list.extend(next_states(
+            next_states_set.extend(next_states(
                 state=curr_state,
                 captured=captured))
 
-        curr_list, next_list = next_list, curr_list
-        next_list.clear()
+        curr_states_set, next_states_set = (
+            next_states_set, curr_states_set)
+        next_states_set.clear()
 
     try:
-        captured = _get_match(curr_list)
+        captured = _get_match(curr_states_set)
     except exceptions.MatchError:
         return None
 

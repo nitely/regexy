@@ -8,7 +8,8 @@ Tools to parse a regular expression into nodes
 
 from typing import (
     Iterator,
-    List)
+    List,
+    Tuple)
 
 from ..shared.nodes import (
     Node,
@@ -43,21 +44,28 @@ SHORTHANDS = {
     'd': DigitNode}
 
 
-def parse_set(set_expression: Iterator[str]) -> SetNode:
+def parse_set(expression: Iterator[Tuple[str, str]], *args) -> SetNode:
     """
     Parse a set atom (``[...]``) into a SetNode
 
-    :param set_expression: content of a set (no brackets included)
+    :param expression: expression iterator\
+    beginning after open bracket
     :return: a set node to match against (like any other char node)
     :private:
     """
+    char = ''
     chars = []
     ranges = []
     shorthands = []
     is_range = False
     is_escaped = False
 
-    for char in set_expression:
+    for char, _nxt in expression:
+        if (char == ']' and
+                not is_escaped and
+                (chars or ranges or shorthands)):
+            break
+
         if char == '\\' and not is_escaped:
             is_escaped = True
             continue
@@ -67,10 +75,6 @@ def parse_set(set_expression: Iterator[str]) -> SetNode:
             is_range = False
             ranges.append(
                 (chars.pop(), char))
-            continue
-
-        if char == '-' and not is_escaped and chars:
-            is_range = True
             continue
 
         if is_escaped:
@@ -84,13 +88,18 @@ def parse_set(set_expression: Iterator[str]) -> SetNode:
 
             continue
 
-        chars.append(char)
+        if char == '-' and chars:
+            is_range = True
+            continue
 
-    assert not is_escaped
-    assert chars or ranges or shorthands
+        chars.append(char)
 
     if is_range:
         chars.append('-')
+
+    assert not is_escaped
+    assert chars or ranges or shorthands
+    assert char == ']'
 
     return SetNode(
         chars=chars,
@@ -98,13 +107,17 @@ def parse_set(set_expression: Iterator[str]) -> SetNode:
         shorthands=shorthands)
 
 
-def parse_repetition_range(range_expression):
+def parse_repetition_range(
+        expression: Iterator[Tuple[str, str]],
+        *args) -> RepetitionRangeNode:
     start = []
     end = []
-
     curr = start
 
-    for char in range_expression:
+    for char, _nxt in expression:
+        if char == '}':
+            break
+
         if char == ',':
             assert curr == start
             curr = end
@@ -119,7 +132,7 @@ def parse_repetition_range(range_expression):
     start = int(''.join(start) or 0)
 
     if end:
-        end = int(''.join(end))
+        end = int(''.join(end) or 0)
     else:
         end = None
 
@@ -127,6 +140,48 @@ def parse_repetition_range(range_expression):
         char=Symbols.REPETITION_RANGE,
         start=start,
         end=end)
+
+
+def parse_group_tag(expression: Iterator[Tuple[str, str]], next_char: str) -> GroupNode:
+    if next_char != '?':
+        return GroupNode(char=Symbols.GROUP_START)
+
+    # At the moment this is just for non-capturing group
+    next(expression)
+    char, _nxt = next(expression)
+    assert char == ':'
+    return GroupNode(
+        char=Symbols.GROUP_START,
+        is_capturing=False)
+
+
+SUB_PARSERS = {
+    '[': parse_set,
+    '{': parse_repetition_range,
+    Symbols.GROUP_START: parse_group_tag}
+
+
+def _peek(iterator, eof=None):
+    """
+    Return an iterator
+
+    Yield current value and\
+    next value in each iteration
+
+    :private:
+    """
+    iterator = iter(iterator)
+
+    try:
+        prev = next(iterator)
+    except StopIteration:
+        return iterator
+
+    for elm in iterator:
+        yield prev, elm
+        prev = elm
+
+    yield prev, eof
 
 
 def parse(expression: str) -> Iterator[Node]:
@@ -141,71 +196,10 @@ def parse(expression: str) -> Iterator[Node]:
     :return: iterator of nodes
     :private:
     """
+    expression = _peek(iter(expression))
     is_escaped = False
-    is_sub_parsing = False
 
-    is_set = False
-    set_start = 0
-
-    is_repetition_range = False
-    repetition_range_tart = 0
-
-    is_group_tag = False
-    group_tag_start = 0
-
-    for index, char in enumerate(expression):
-        if char == ']' and not is_escaped and set_start < index:
-            assert is_set
-            is_set = False
-            yield parse_set(expression[set_start:index])
-            continue
-
-        if is_set:
-            is_escaped = char == '\\' and not is_escaped
-            continue
-
-        if char == '[' and not is_escaped:
-            assert not is_set
-            is_set = True
-            set_start = index + 1
-            continue
-
-        if char == '}' and not is_escaped:
-            assert is_repetition_range
-            is_repetition_range = False
-            yield parse_repetition_range(expression[repetition_range_tart:index])
-            continue
-
-        if is_repetition_range:
-            continue
-
-        if char == '{' and not is_escaped:
-            assert not is_repetition_range
-            is_repetition_range = True
-            repetition_range_tart = index + 1
-            continue
-
-        if is_group_tag:
-            if group_tag_start == index:
-                continue
-
-            is_group_tag = False
-            group_tag = expression[group_tag_start:index + 1]
-
-            if group_tag == '?:':
-                yield GroupNode(
-                    char=Symbols.GROUP_START,
-                    is_capturing=False)
-                continue
-
-            assert False, 'unsupported group tag %s' % group_tag
-
-        if char == '(' and expression[index + 1] == '?' and not is_escaped:
-            assert not is_group_tag
-            is_group_tag = True
-            group_tag_start = index + 1
-            continue
-
+    for char, next_char in expression:
         if is_escaped:
             is_escaped = False
             yield SHORTHANDS.get(char, CharNode)(char=char)
@@ -215,12 +209,108 @@ def parse(expression: str) -> Iterator[Node]:
             is_escaped = True
             continue
 
+        if char in SUB_PARSERS:
+            yield SUB_PARSERS[char](expression, next_char)
+            continue
+
         yield SYMBOLS.get(char, CharNode)(char=char)
 
     assert not is_escaped
-    assert not is_set
-    assert not is_repetition_range
-    assert not is_group_tag
+
+
+def greediness(nodes: Iterator[Node]) -> Iterator[Node]:
+    nodes_it = _peek(nodes)
+
+    for node, next_node in nodes_it:
+        # todo: make RepetitionNode?
+        is_repetition = (
+            isinstance(node, OpNode) and
+            node.char in (
+                Symbols.ZERO_OR_ONE,
+                Symbols.ZERO_OR_MORE,
+                Symbols.ONE_OR_MORE,
+                Symbols.REPETITION_RANGE))
+        is_next_zero_or_one = (
+            isinstance(next_node, OpNode) and
+            next_node.char == Symbols.ZERO_OR_ONE)
+
+        if is_repetition and is_next_zero_or_one:
+            node.is_greedy = True
+            next(nodes_it)  # Skip next
+
+        yield node
+
+
+def join_atoms(nodes: Iterator[Node]) -> Iterator[Node]:
+    """
+    Add joiners to a sequence of nodes.\
+    Joiners are meant to join sets\
+    of chars that belong together.\
+    This is required for later conversion into rpn notation.
+
+    To clarify why this is necessary say there\
+    is a math formula (not a regex) such as ``1+2``.\
+    In RPN this would read as ``12+``.\
+    Now what about ``11+12``? without joiners this would\
+    read ``1112+`` and would be wrongly executed as ``111+2``.\
+    Enter joins the RPN is ``1~11~2+`` and the parser\
+    will know ``1~1`` means ``11`` and\
+    ``1~2`` means ``12`` resulting in ``11+12``.
+
+    Outputs::
+
+        a~(b|c)*~d
+        (a~b~c|d~f~g)
+        a~b~c
+        (a~b~c|d~e~f)*~x~y~z
+        a+~b
+        a?~b
+        a*~b
+        a+~b?
+        (a)~(b)
+        (a)~b
+
+    :param nodes: an iterator of nodes
+    :return: iterator of nodes containing joiners
+    :private:
+    """
+    atoms_count = 0
+
+    for node in nodes:
+        if isinstance(node, CharNode):
+            atoms_count += 1
+
+            if atoms_count > 1:
+                atoms_count = 1
+                yield OpNode(char=Symbols.JOINER)
+
+            yield node
+            continue
+
+        if node.char == Symbols.GROUP_START:
+            if atoms_count:
+                yield OpNode(char=Symbols.JOINER)
+
+            atoms_count = 0
+            yield node
+            continue
+
+        if node.char == Symbols.OR:
+            atoms_count = 0
+            yield node
+            continue
+
+        if node.char in {
+                Symbols.GROUP_END,
+                Symbols.ZERO_OR_MORE,
+                Symbols.ONE_OR_MORE,
+                Symbols.ZERO_OR_ONE,
+                Symbols.REPETITION_RANGE}:
+            atoms_count += 1
+            yield node
+            continue
+
+        raise ValueError('Unhandled node %s' % repr(node))
 
 
 def fill_groups(nodes: List[Node]) -> int:
@@ -283,75 +373,3 @@ def fill_groups(nodes: List[Node]) -> int:
     assert not groups
 
     return groups_count
-
-
-def join_atoms(nodes: Iterator[Node]) -> Iterator[Node]:
-    """
-    Add joiners to a sequence of nodes.\
-    Joiners are meant to join sets\
-    of chars that belong together.\
-    This is required for later conversion into rpn notation.
-
-    To clarify why this is necessary say there\
-    is a math formula (not a regex) such as ``1+2``.\
-    In RPN this would read as ``12+``.\
-    Now what about ``11+12``? without joiners this would\
-    read ``1112+`` and would be wrongly executed as ``111+2``.\
-    Enter joins the RPN is ``1~11~2+`` and the parser\
-    will know ``1~1`` means ``11`` and\
-    ``1~2`` means ``12`` resulting in ``11+12``.
-
-    Outputs::
-
-        a~(b|c)*~d
-        (a~b~c|d~f~g)
-        a~b~c
-        (a~b~c|d~e~f)*~x~y~z
-        a+~b
-        a?~b
-        a*~b
-        a+~b?
-        (a)~(b)
-        (a)~b
-
-    :param nodes: a iterator of nodes
-    :return: iterator of nodes containing joiners
-    :private:
-    """
-    atoms_count = 0
-
-    for node in nodes:
-        if isinstance(node, CharNode):
-            atoms_count += 1
-
-            if atoms_count > 1:
-                atoms_count = 1
-                yield OpNode(char=Symbols.JOINER)
-
-            yield node
-            continue
-
-        if node.char == Symbols.GROUP_START:
-            if atoms_count:
-                yield OpNode(char=Symbols.JOINER)
-
-            atoms_count = 0
-            yield node
-            continue
-
-        if node.char == Symbols.OR:
-            atoms_count = 0
-            yield node
-            continue
-
-        if node.char in {
-                Symbols.GROUP_END,
-                Symbols.ZERO_OR_MORE,
-                Symbols.ONE_OR_MORE,
-                Symbols.ZERO_OR_ONE,
-                Symbols.REPETITION_RANGE}:
-            atoms_count += 1
-            yield node
-            continue
-
-        raise ValueError('Unhandled node %s' % repr(node))

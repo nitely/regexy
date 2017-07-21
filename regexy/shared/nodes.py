@@ -35,7 +35,7 @@ class Node:
     :ivar out: refs to next nodes
     :private:
     """
-    def __init__(self, char: str, out: Sequence['Node']=()) -> None:
+    def __init__(self, *, char: str, out: Sequence['Node']=()) -> None:
         self.char = char
         self.out = out
 
@@ -51,8 +51,8 @@ class CharNode(Node):
     :ivar is_captured: set this node for capturing
     :private:
     """
-    def __init__(self, is_captured: bool=False, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, *, is_captured: bool=False, **kwargs) -> None:
+        super().__init__(**kwargs)
         self.is_captured = is_captured
 
 
@@ -70,6 +70,9 @@ class OpNode(SymbolNode):
 
     :private:
     """
+    def __init__(self, *, is_greedy: bool=False, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.is_greedy = is_greedy
 
 
 class GroupNode(SymbolNode):
@@ -83,12 +86,12 @@ class GroupNode(SymbolNode):
     """
     def __init__(
             self,
+            *,
             index: int=None,
             is_repeated: bool=False,
             is_capturing: bool=True,
-            *args,
             **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
         self.index = index
         self.is_repeated = is_repeated
         self.is_capturing = is_capturing
@@ -98,8 +101,8 @@ class RepetitionRangeNode(OpNode):
 
     # todo: char should print as {start, end}
 
-    def __init__(self, start: int, end: int=None, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, *, start: int, end: int=None, **kwargs) -> None:
+        super().__init__(**kwargs)
         self.start = start
         self.end = end
 
@@ -110,7 +113,7 @@ class ShorthandNode(CharNode):
 
 class CharMatcher:
 
-    def __init__(self, char: str, compare: Callable[[str], bool]) -> None:
+    def __init__(self, *, char: str, compare: Callable[[str], bool]) -> None:
         self.char = '\\%s' % char
         self.compare = compare
 
@@ -123,19 +126,17 @@ class CharMatcher:
 
 class AlphaNumNode(ShorthandNode):
 
-    def __init__(self, char: str, *args, **kwargs) -> None:
+    def __init__(self, *, char: str, **kwargs) -> None:
         super().__init__(
             char=CharMatcher(char=char, compare=lambda c: c.isalnum()),
-            *args,
             **kwargs)
 
 
 class DigitNode(ShorthandNode):
 
-    def __init__(self, char: str, *args, **kwargs) -> None:
+    def __init__(self, *, char: str, **kwargs) -> None:
         super().__init__(
             char=CharMatcher(char=char, compare=lambda c: c.isdigit()),
-            *args,
             **kwargs)
 
 
@@ -143,6 +144,7 @@ class SetMatcher:
 
     def __init__(
             self,
+            *,
             chars: Iterator[str],
             ranges: Iterator[Tuple[str, str]],
             shorthands: Iterator[CharMatcher]) -> None:
@@ -172,14 +174,16 @@ class SetNode(CharNode):
 
     def __init__(
             self,
+            *,
             chars: Iterator[str],
             ranges: Iterator[Tuple[str, str]],
             shorthands: Iterator[CharMatcher],
-            *args,
             **kwargs) -> None:
         super().__init__(
-            char=SetMatcher(chars, ranges, shorthands),
-            *args,
+            char=SetMatcher(
+                chars=chars,
+                ranges=ranges,
+                shorthands=shorthands),
             **kwargs)
 
 
@@ -192,8 +196,8 @@ class SkipNode(Node):
     :private:
     """
 
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(char='', *args, **kwargs)
+    def __init__(self, **kwargs) -> None:
+        super().__init__(char='', **kwargs)
 
 
 class EOFNode(Node):

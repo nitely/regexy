@@ -18,8 +18,9 @@ import collections
 
 from .parse import (
     parse,
-    fill_groups,
-    join_atoms)
+    greediness,
+    join_atoms,
+    fill_groups)
 from .rpn import rpn
 from .nfa import nfa
 
@@ -47,6 +48,13 @@ NFA.__doc__ = """
 """
 
 
+def _to_nodes(expression: str):
+    return (
+        join_atoms(
+            greediness(
+                parse(expression))))
+
+
 def to_nfa(expression: str) -> NFA:
     """
     Build the NFA from a given regular expression
@@ -60,10 +68,10 @@ def to_nfa(expression: str) -> NFA:
     :return: NFA for the given expression
     :public:
     """
-    nodes = list(parse(expression))
+    nodes = list(_to_nodes(expression))
     groups_count = fill_groups(nodes)
     return NFA(
-        state=nfa(rpn(join_atoms(nodes))),
+        state=nfa(rpn(nodes)),
         groups_count=groups_count)
 
 
@@ -80,7 +88,7 @@ def to_rpn(expression: str) -> str:
     """
     return ''.join(
         str(node.char)
-        for node in rpn(join_atoms(parse(expression))))
+        for node in rpn(_to_nodes(expression)))
 
 
 def to_atoms(expression: str) -> str:
@@ -96,5 +104,4 @@ def to_atoms(expression: str) -> str:
     """
     return ''.join(
         str(node.char)
-        for node in join_atoms(parse(expression)))
-
+        for node in _to_nodes(expression))

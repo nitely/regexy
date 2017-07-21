@@ -337,3 +337,54 @@ class RegexyTest(unittest.TestCase):
 
         # self.assertIsNone(match(r'((a)*n?(asd))*', 'aaanasdnasd'))  # fixme
         # should be equal to r'((a)*n?(asd)*)*' (see last capture)
+
+    def test_greediness(self):
+        self.assertEqual(
+            match(r'(a)*(a)*(a)*', 'aaa'),
+            (('a', 'a', 'a'), None, None))
+        self.assertEqual(
+            match(r'(a)*?(a)*(a)*?', 'aaa'),
+            (None, ('a', 'a', 'a'), None))
+        self.assertEqual(
+            match(r'(a)*?(a)*?(a)*', 'aaa'),
+            (None, None, ('a', 'a', 'a')))
+        self.assertEqual(
+            match(r'(a)*?(a)*?(a)*?', 'aaa'),
+            (None, None, ('a', 'a', 'a')))
+
+        self.assertEqual(match(r'(a)?(aa?)', 'aa'), ('a', 'a'))
+        self.assertEqual(match(r'(a)??(a)', 'aa'), ('a', 'a'))
+        self.assertEqual(match(r'(a)??(aa?)', 'aa'), (None, 'aa'))
+
+        self.assertEqual(
+            match(r'(a)+(a)+(a)?', 'aaa'),
+            (('a', 'a'), ('a',), None))
+        self.assertEqual(
+            match(r'(a)+?(a)+(a)?', 'aaa'),
+            (('a',), ('a', 'a'), None))
+        self.assertEqual(
+            match(r'(a)+?(a)+?(a)?', 'aaa'),
+            (('a',), ('a',), 'a'))
+
+        self.assertEqual(
+            match(r'(a){,}(a){,}(a){,}', 'aaa'),
+            (('a', 'a', 'a'), None, None))
+        self.assertEqual(
+            match(r'(a){,}?(a){,}(a){,}?', 'aaa'),
+            (None, ('a', 'a', 'a'), None))
+        self.assertEqual(
+            match(r'(a){,}?(a){,}?(a){,}', 'aaa'),
+            (None, None, ('a', 'a', 'a')))
+        self.assertEqual(
+            match(r'(a){,}?(a){,}?(a){,}?', 'aaa'),
+            (None, None, ('a', 'a', 'a')))
+
+        self.assertEqual(
+            match(r'(a){1,}(a){1,}(a)?', 'aaa'),
+            (('a', 'a'), ('a',), None))
+        self.assertEqual(
+            match(r'(a){1,}?(a){1,}(a)?', 'aaa'),
+            (('a',), ('a', 'a'), None))
+        self.assertEqual(
+            match(r'(a){1,}?(a){1,}?(a)?', 'aaa'),
+            (('a',), ('a',), 'a'))
