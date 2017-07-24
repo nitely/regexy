@@ -102,7 +102,7 @@ class GroupNode(SymbolNode):
 
 class AssertionNode(SymbolNode):
 
-    def match(self, char, next_char):
+    def match(self, char, next_char) -> bool:
         raise NotImplementedError
 
 
@@ -174,7 +174,7 @@ class DigitNode(ShorthandNode):
 
 
 # Whitespace characters according to python re
-WHITE_SPACES = {' ', '\t', '\n', '\r', '\f', '\v'}
+WHITE_SPACES = frozenset(' \t\n\r\f\v')
 
 
 class WhiteSpaceNode(ShorthandNode):
@@ -183,7 +183,9 @@ class WhiteSpaceNode(ShorthandNode):
         super().__init__(
             char=CharMatcher(
                 char=char,
-                compare=lambda c: c in WHITE_SPACES or unicodedata.category(c)[0] == 'Z'),
+                compare=lambda c: (
+                    c in WHITE_SPACES or
+                    unicodedata.category(c)[0] == 'Z')),
             **kwargs)
 
 
@@ -193,7 +195,9 @@ class NotWhiteSpaceNode(ShorthandNode):
         super().__init__(
             char=CharMatcher(
                 char=char,
-                compare=lambda c: c not in WHITE_SPACES and unicodedata.category(c)[0] != 'Z'),
+                compare=lambda c: (
+                    c not in WHITE_SPACES and
+                    unicodedata.category(c)[0] != 'Z')),
             **kwargs)
 
 
@@ -229,9 +233,9 @@ class SetMatcher:
             chars: Iterator[str],
             ranges: Iterator[Tuple[str, str]],
             shorthands: Iterator[CharMatcher]) -> None:
-        self._chars = set(chars)
-        self._ranges = list(ranges)  # todo: interval tree
-        self._shorthands = list(shorthands)
+        self._chars = frozenset(chars)
+        self._ranges = tuple(ranges)  # todo: interval tree
+        self._shorthands = tuple(shorthands)
 
     def __eq__(self, other: str) -> bool:
         return (
@@ -262,6 +266,35 @@ class SetNode(CharNode):
             **kwargs) -> None:
         super().__init__(
             char=SetMatcher(
+                chars=chars,
+                ranges=ranges,
+                shorthands=shorthands),
+            **kwargs)
+
+
+class NotSetMatcher:
+
+    def __init__(self, **kwargs) -> None:
+        self._matcher = SetMatcher(**kwargs)
+
+    def __eq__(self, other: str) -> bool:
+        return other != self._matcher
+
+    def __repr__(self) -> str:
+        return '[^%s]' % repr(self._matcher)[1:-1]
+
+
+class NotSetNode(CharNode):
+
+    def __init__(
+            self,
+            *,
+            chars: Iterator[str],
+            ranges: Iterator[Tuple[str, str]],
+            shorthands: Iterator[CharMatcher],
+            **kwargs) -> None:
+        super().__init__(
+            char=NotSetMatcher(
                 chars=chars,
                 ranges=ranges,
                 shorthands=shorthands),
