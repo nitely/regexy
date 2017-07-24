@@ -30,6 +30,7 @@ Mostly based on Thompson's NFA.
 - [x] `\b` word boundary
 - [x] Match any (dot)
 - [x] Sets complement
+- [x] Lookahead assertion `(?=...)` and `(?!...)` (limited to a single char)
 - [ ] Named capturing groups
 - [ ] Search
 - [ ] Full_match

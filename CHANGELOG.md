@@ -1,3 +1,8 @@
+0.14.0
+==================
+
+* Add lookahead assertion `(?=...)` and `(?!...)` (limited to a single char)
+
 0.13.0
 ==================
 
