@@ -172,6 +172,22 @@ class DigitNode(ShorthandNode):
             **kwargs)
 
 
+class NotAlphaNumNode(ShorthandNode):
+
+    def __init__(self, *, char: str, **kwargs) -> None:
+        super().__init__(
+            char=CharMatcher(char=char, compare=lambda c: not c.isalnum()),
+            **kwargs)
+
+
+class NotDigitNode(ShorthandNode):
+
+    def __init__(self, *, char: str, **kwargs) -> None:
+        super().__init__(
+            char=CharMatcher(char=char, compare=lambda c: not c.isdigit()),
+            **kwargs)
+
+
 class AnyNode(CharNode):
 
     def __init__(self, *, char: str, **kwargs) -> None:

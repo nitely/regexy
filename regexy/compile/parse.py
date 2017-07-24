@@ -11,20 +11,7 @@ from typing import (
     List,
     Tuple)
 
-from ..shared.nodes import (
-    Node,
-    OpNode,
-    GroupNode,
-    CharNode,
-    AlphaNumNode,
-    DigitNode,
-    SetNode,
-    RepetitionRangeNode,
-    StartNode,
-    EndNode,
-    AssertionNode,
-    WordBoundaryNode,
-    AnyNode)
+from ..shared import nodes
 from ..shared import Symbols
 
 
@@ -35,31 +22,33 @@ __all__ = [
 
 
 SYMBOLS = {
-    Symbols.JOINER: OpNode,
-    Symbols.ZERO_OR_MORE: OpNode,
-    Symbols.ZERO_OR_ONE: OpNode,
-    Symbols.ONE_OR_MORE: OpNode,
-    Symbols.OR: OpNode,
-    Symbols.GROUP_START: GroupNode,
-    Symbols.GROUP_END: GroupNode,
-    Symbols.START: StartNode,
-    Symbols.END: EndNode,
-    Symbols.ANY: AnyNode}
+    Symbols.JOINER: nodes.OpNode,
+    Symbols.ZERO_OR_MORE: nodes.OpNode,
+    Symbols.ZERO_OR_ONE: nodes.OpNode,
+    Symbols.ONE_OR_MORE: nodes.OpNode,
+    Symbols.OR: nodes.OpNode,
+    Symbols.GROUP_START: nodes.GroupNode,
+    Symbols.GROUP_END: nodes.GroupNode,
+    Symbols.START: nodes.StartNode,
+    Symbols.END: nodes.EndNode,
+    Symbols.ANY: nodes.AnyNode}
 
 
 SHORTHANDS = {
-    'w': AlphaNumNode,
-    'd': DigitNode}
+    'w': nodes.AlphaNumNode,
+    'd': nodes.DigitNode,
+    'W': nodes.NotAlphaNumNode,
+    'D': nodes.NotDigitNode}
 
 
 ASSERTIONS = {
-    'b': WordBoundaryNode}
+    'b': nodes.WordBoundaryNode}
 
 
 ESCAPED_CHARS = {**SHORTHANDS, **ASSERTIONS}
 
 
-def parse_set(expression: Iterator[Tuple[str, str]], *args) -> SetNode:
+def parse_set(expression: Iterator[Tuple[str, str]], *args) -> nodes.SetNode:
     """
     Parse a set atom (``[...]``) into a SetNode
 
@@ -116,7 +105,7 @@ def parse_set(expression: Iterator[Tuple[str, str]], *args) -> SetNode:
     assert chars or ranges or shorthands
     assert char == ']'
 
-    return SetNode(
+    return nodes.SetNode(
         chars=chars,
         ranges=ranges,
         shorthands=shorthands)
@@ -124,7 +113,7 @@ def parse_set(expression: Iterator[Tuple[str, str]], *args) -> SetNode:
 
 def parse_repetition_range(
         expression: Iterator[Tuple[str, str]],
-        *args) -> RepetitionRangeNode:
+        *args) -> nodes.RepetitionRangeNode:
     start = []
     end = []
     curr = start
@@ -151,21 +140,21 @@ def parse_repetition_range(
     else:
         end = None
 
-    return RepetitionRangeNode(
+    return nodes.RepetitionRangeNode(
         char=Symbols.REPETITION_RANGE,
         start=start,
         end=end)
 
 
-def parse_group_tag(expression: Iterator[Tuple[str, str]], next_char: str) -> GroupNode:
+def parse_group_tag(expression: Iterator[Tuple[str, str]], next_char: str) -> nodes.GroupNode:
     if next_char != '?':
-        return GroupNode(char=Symbols.GROUP_START)
+        return nodes.GroupNode(char=Symbols.GROUP_START)
 
     # At the moment this is just for non-capturing group
     next(expression)
     char, _nxt = next(expression)
     assert char == ':'
-    return GroupNode(
+    return nodes.GroupNode(
         char=Symbols.GROUP_START,
         is_capturing=False)
 
@@ -199,7 +188,7 @@ def _peek(iterator, eof=None):
     yield prev, eof
 
 
-def parse(expression: str) -> Iterator[Node]:
+def parse(expression: str) -> Iterator[nodes.Node]:
     """
     Parse a regular expression into a sequence nodes.\
     Literals (escaped chars) are parsed as shorthands\
@@ -217,7 +206,7 @@ def parse(expression: str) -> Iterator[Node]:
     for char, next_char in expression:
         if is_escaped:
             is_escaped = False
-            yield ESCAPED_CHARS.get(char, CharNode)(char=char)
+            yield ESCAPED_CHARS.get(char, nodes.CharNode)(char=char)
             continue
 
         if char == '\\':
@@ -228,25 +217,25 @@ def parse(expression: str) -> Iterator[Node]:
             yield SUB_PARSERS[char](expression, next_char)
             continue
 
-        yield SYMBOLS.get(char, CharNode)(char=char)
+        yield SYMBOLS.get(char, nodes.CharNode)(char=char)
 
     assert not is_escaped
 
 
-def greediness(nodes: Iterator[Node]) -> Iterator[Node]:
-    nodes_it = _peek(nodes)
+def greediness(expression_nodes: Iterator[nodes.Node]) -> Iterator[nodes.Node]:
+    nodes_it = _peek(expression_nodes)
 
     for node, next_node in nodes_it:
         # todo: make RepetitionNode?
         is_repetition = (
-            isinstance(node, OpNode) and
+            isinstance(node, nodes.OpNode) and
             node.char in (
                 Symbols.ZERO_OR_ONE,
                 Symbols.ZERO_OR_MORE,
                 Symbols.ONE_OR_MORE,
                 Symbols.REPETITION_RANGE))
         is_next_zero_or_one = (
-            isinstance(next_node, OpNode) and
+            isinstance(next_node, nodes.OpNode) and
             next_node.char == Symbols.ZERO_OR_ONE)
 
         if is_repetition and is_next_zero_or_one:
@@ -256,7 +245,7 @@ def greediness(nodes: Iterator[Node]) -> Iterator[Node]:
         yield node
 
 
-def join_atoms(nodes: Iterator[Node]) -> Iterator[Node]:
+def join_atoms(expression_nodes: Iterator[nodes.Node]) -> Iterator[nodes.Node]:
     """
     Add joiners to a sequence of nodes.\
     Joiners are meant to join sets\
@@ -291,20 +280,20 @@ def join_atoms(nodes: Iterator[Node]) -> Iterator[Node]:
     """
     atoms_count = 0
 
-    for node in nodes:
-        if isinstance(node, (CharNode, AssertionNode)):
+    for node in expression_nodes:
+        if isinstance(node, (nodes.CharNode, nodes.AssertionNode)):
             atoms_count += 1
 
             if atoms_count > 1:
                 atoms_count = 1
-                yield OpNode(char=Symbols.JOINER)
+                yield nodes.OpNode(char=Symbols.JOINER)
 
             yield node
             continue
 
         if node.char == Symbols.GROUP_START:
             if atoms_count:
-                yield OpNode(char=Symbols.JOINER)
+                yield nodes.OpNode(char=Symbols.JOINER)
 
             atoms_count = 0
             yield node
@@ -328,7 +317,7 @@ def join_atoms(nodes: Iterator[Node]) -> Iterator[Node]:
         raise ValueError('Unhandled node %s' % repr(node))
 
 
-def fill_groups(nodes: List[Node]) -> int:
+def fill_groups(expression_nodes: List[nodes.Node]) -> int:
     """
     Fill groups with missing data.\
     This is index of group, whether\
@@ -346,13 +335,13 @@ def fill_groups(nodes: List[Node]) -> int:
     groups = []
     groups_non_capt = []
 
-    for index, node in enumerate(nodes):
-        if isinstance(node, CharNode):
+    for index, node in enumerate(expression_nodes):
+        if isinstance(node, nodes.CharNode):
             node.is_captured = len(groups) - len(groups_non_capt) > 0
             continue
 
         if node.char == Symbols.GROUP_START:
-            assert isinstance(node, GroupNode)
+            assert isinstance(node, nodes.GroupNode)
 
             if not node.is_capturing:
                 groups_non_capt.append(node)
@@ -373,7 +362,7 @@ def fill_groups(nodes: List[Node]) -> int:
                 continue
 
             try:
-                next_node = nodes[index + 1]
+                next_node = expression_nodes[index + 1]
             except IndexError:
                 start.is_repeated = False
             else:

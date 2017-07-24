@@ -127,6 +127,18 @@ class RegexyTest(unittest.TestCase):
         self.assertIsNotNone(match(r'\d', '۲'))  # Kharosthi numeral
         self.assertIsNone(match(r'\d', '⅕'))
 
+    def test_alphanum_not_shorthand(self):
+        self.assertIsNone(match(r'\W', 'a'))
+        self.assertIsNone(match(r'\W*', 'abc123'))
+        self.assertIsNotNone(match(r'\W+', '!@#'))
+
+    def test_not_digit(self):
+        self.assertIsNone(match(r'\D', '1'))
+        self.assertIsNone(match(r'\D*', '123'))
+        self.assertIsNone(match(r'\D', '۲'))  # Kharosthi numeral
+        self.assertIsNotNone(match(r'\D', '⅕'))
+        self.assertIsNotNone(match(r'\D+', '!@#'))
+
     def test_set(self):
         self.assertIsNotNone(match(r'[a]', 'a'))
         self.assertIsNotNone(match(r'[abc]', 'a'))
