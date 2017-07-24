@@ -399,3 +399,14 @@ class RegexyTest(unittest.TestCase):
             match(r'^(a)$', 'a'), ('a',))
         self.assertEqual(
             match(r'^$', ''), ())
+        self.assertEqual(
+            match(r'\ba\b', 'a'), ())
+        self.assertEqual(
+            match(r'\ba\b', 'aa'), None)
+        self.assertEqual(
+            match(r'([\w ]*?)(\baa\b)([\w ]*?)', 'bbaa aa'), ('bbaa ', 'aa', None))
+        self.assertEqual(
+            match(r'([\w ]*)(\baa\b)([\w ]*)', 'aa bbaa'), (None, 'aa', ' bbaa'))
+        self.assertEqual(
+            match(r'^([\w ]*?)(\bis\b)([\w ]*?)$', 'This island is great'),
+            ('This island ', 'is', ' great'))

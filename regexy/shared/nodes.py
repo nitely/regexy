@@ -117,6 +117,18 @@ class EndNode(AssertionNode):
         return not next_char
 
 
+class WordBoundaryNode(AssertionNode):
+
+    def match(self, char, next_char):
+        is_char_w = char.isalnum()
+        is_next_char_w = next_char.isalnum()
+        return (
+            (not char and is_next_char_w) or
+            (is_char_w and not next_char) or
+            (is_char_w and not is_next_char_w) or
+            (not is_char_w and is_next_char_w))
+
+
 class RepetitionRangeNode(OpNode):
 
     # todo: char should print as {start, end}

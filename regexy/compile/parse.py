@@ -22,7 +22,8 @@ from ..shared.nodes import (
     RepetitionRangeNode,
     StartNode,
     EndNode,
-    AssertionNode)
+    AssertionNode,
+    WordBoundaryNode)
 from ..shared import Symbols
 
 
@@ -47,6 +48,13 @@ SYMBOLS = {
 SHORTHANDS = {
     'w': AlphaNumNode,
     'd': DigitNode}
+
+
+ASSERTIONS = {
+    'b': WordBoundaryNode}
+
+
+ESCAPED_CHARS = {**SHORTHANDS, **ASSERTIONS}
 
 
 def parse_set(expression: Iterator[Tuple[str, str]], *args) -> SetNode:
@@ -207,7 +215,7 @@ def parse(expression: str) -> Iterator[Node]:
     for char, next_char in expression:
         if is_escaped:
             is_escaped = False
-            yield SHORTHANDS.get(char, CharNode)(char=char)
+            yield ESCAPED_CHARS.get(char, CharNode)(char=char)
             continue
 
         if char == '\\':
