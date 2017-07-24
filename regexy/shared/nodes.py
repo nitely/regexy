@@ -130,6 +130,26 @@ class WordBoundaryNode(AssertionNode):
             (not is_char_w and is_next_char_w))
 
 
+class LookaheadNode(AssertionNode):
+
+    def __init__(self, *, node, **kwargs) -> None:
+        super().__init__(char='?=%s' % node, **kwargs)
+        self._node = node
+
+    def match(self, char, next_char):
+        return next_char == self._node.char
+
+
+class NotLookaheadNode(AssertionNode):
+
+    def __init__(self, *, node, **kwargs) -> None:
+        super().__init__(char='?!%s' % node, **kwargs)
+        self._node = node
+
+    def match(self, char, next_char):
+        return next_char != self._node.char
+
+
 class RepetitionRangeNode(OpNode):
 
     # todo: char should print as {start, end}
