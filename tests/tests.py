@@ -476,3 +476,19 @@ class RegexyTest(unittest.TestCase):
             match(r'.', '\t'), ())
         self.assertEqual(
             match(r'.', '\n'), None)
+
+    def test_lookahead_assertion(self):
+        self.assertIsNotNone(match(r'a(?=b)b', 'ab'))
+        self.assertIsNotNone(match(r'a(?=\w)b', 'ab'))
+        self.assertIsNotNone(match(r'a(?=b)bc', 'abc'))
+        self.assertIsNone(match(r'a(?=b)c', 'abc'))
+
+    def test_not_lookahead_assertion(self):
+        self.assertIsNone(match(r'a(?!b)b', 'ab'))
+        self.assertIsNone(match(r'a(?!\w)b', 'ab'))
+        self.assertIsNotNone(match(r'a(?!b)c', 'ac'))
+        self.assertIsNone(match(r'a(?!b).*', 'ab'))
+        self.assertIsNotNone(match(r'a(?!b).*', 'ac'))
+        self.assertEqual(match(r'a(?!b).*', 'ac'), ())
+        self.assertEqual(match(r'(a(?!b).*)', 'ac'), ('ac',))
+        self.assertEqual(match(r'(a)(?!b)(.*)', 'ac'), ('a', 'c'))

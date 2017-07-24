@@ -50,6 +50,11 @@ ASSERTIONS = {
 ESCAPED_CHARS = {**SHORTHANDS, **ASSERTIONS}
 
 
+LOOKAHEAD_ASSERTIONS = {
+    '=': nodes.LookaheadNode,
+    '!': nodes.NotLookaheadNode}
+
+
 def parse_set(expression: Iterator[Tuple[str, str]], *args) -> nodes.SetNode:
     """
     Parse a set atom (``[...]``) into a SetNode
@@ -119,7 +124,7 @@ def parse_set(expression: Iterator[Tuple[str, str]], *args) -> nodes.SetNode:
         True: nodes.SetNode,
         False: nodes.NotSetNode}
 
-    return set_nodes[not is_complement](
+    yield set_nodes[not is_complement](
         chars=chars,
         ranges=ranges,
         shorthands=shorthands)
@@ -154,23 +159,42 @@ def parse_repetition_range(
     else:
         end = None
 
-    return nodes.RepetitionRangeNode(
+    yield nodes.RepetitionRangeNode(
         char=Symbols.REPETITION_RANGE,
         start=start,
         end=end)
 
 
 def parse_group_tag(expression: Iterator[Tuple[str, str]], next_char: str) -> nodes.GroupNode:
-    if next_char != '?':
-        return nodes.GroupNode(char=Symbols.GROUP_START)
-
-    # At the moment this is just for non-capturing group
-    next(expression)
-    char, _nxt = next(expression)
-    assert char == ':'
-    return nodes.GroupNode(
+    yield nodes.GroupNode(
         char=Symbols.GROUP_START,
-        is_capturing=False)
+        is_capturing=next_char != '?')
+
+    # A regular group
+    if next_char != '?':
+        return
+
+    next(expression)  # Consume "("
+    char, nxt = next(expression)
+
+    if char == ':':
+        return
+
+    if char in LOOKAHEAD_ASSERTIONS:
+        lookahead = LOOKAHEAD_ASSERTIONS[char]
+        char, nxt = next(expression)
+
+        if char == '\\':
+            char, nxt = next(expression)
+            assert nxt == ')'
+            yield lookahead(node=SHORTHANDS.get(char, nodes.CharNode)(char=char))
+            return
+
+        assert nxt == ')'
+        yield lookahead(node=nodes.CharNode(char=char))
+        return
+
+    assert False, 'unhandled group tag'
 
 
 SUB_PARSERS = {
@@ -228,7 +252,7 @@ def parse(expression: str) -> Iterator[nodes.Node]:
             continue
 
         if char in SUB_PARSERS:
-            yield SUB_PARSERS[char](expression, next_char)
+            yield from SUB_PARSERS[char](expression, next_char)
             continue
 
         yield SYMBOLS.get(char, nodes.CharNode)(char=char)
