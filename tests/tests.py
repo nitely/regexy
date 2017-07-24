@@ -127,6 +127,35 @@ class RegexyTest(unittest.TestCase):
         self.assertIsNotNone(match(r'\d', '۲'))  # Kharosthi numeral
         self.assertIsNone(match(r'\d', '⅕'))
 
+    def test_white_space_shorthand(self):
+        self.assertIsNotNone(match(r'\s', ' '))
+        self.assertIsNotNone(match(r'\s*', '   '))
+        self.assertIsNotNone(match(r'\s*', ' \t\n\r\f\v'))
+        self.assertIsNotNone(match(r'\s', '\u2028'))  # Line separator
+
+    def test_alphanum_not_shorthand(self):
+        self.assertIsNone(match(r'\W', 'a'))
+        self.assertIsNone(match(r'\W*', 'abc123'))
+        self.assertIsNotNone(match(r'\W+', '!@#'))
+
+    def test_not_digit(self):
+        self.assertIsNone(match(r'\D', '1'))
+        self.assertIsNone(match(r'\D*', '123'))
+        self.assertIsNone(match(r'\D', '۲'))  # Kharosthi numeral
+        self.assertIsNotNone(match(r'\D', '⅕'))
+        self.assertIsNotNone(match(r'\D+', '!@#'))
+
+    def test_not_white_space_shorthand(self):
+        self.assertIsNotNone(match(r'\S*', 'asd123!@#'))
+        self.assertIsNone(match(r'\S', ' '))
+        self.assertIsNone(match(r'\S*', '   '))
+        self.assertIsNone(match(r'\S', '\t'))
+        self.assertIsNone(match(r'\S', '\n'))
+        self.assertIsNone(match(r'\S', '\r'))
+        self.assertIsNone(match(r'\S', '\f'))
+        self.assertIsNone(match(r'\S', '\v'))
+        self.assertIsNone(match(r'\S', '\u2028'))  # Line separator
+
     def test_set(self):
         self.assertIsNotNone(match(r'[a]', 'a'))
         self.assertIsNotNone(match(r'[abc]', 'a'))

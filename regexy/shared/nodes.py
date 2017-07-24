@@ -8,6 +8,7 @@ the node types of the NFA
 :private:
 """
 
+import unicodedata
 from typing import (
     Sequence,
     Callable,
@@ -169,6 +170,46 @@ class DigitNode(ShorthandNode):
     def __init__(self, *, char: str, **kwargs) -> None:
         super().__init__(
             char=CharMatcher(char=char, compare=lambda c: c.isdigit()),
+            **kwargs)
+
+
+# Whitespace characters according to python re
+WHITE_SPACES = {' ', '\t', '\n', '\r', '\f', '\v'}
+
+
+class WhiteSpaceNode(ShorthandNode):
+
+    def __init__(self, *, char: str, **kwargs) -> None:
+        super().__init__(
+            char=CharMatcher(
+                char=char,
+                compare=lambda c: c in WHITE_SPACES or unicodedata.category(c)[0] == 'Z'),
+            **kwargs)
+
+
+class NotWhiteSpaceNode(ShorthandNode):
+
+    def __init__(self, *, char: str, **kwargs) -> None:
+        super().__init__(
+            char=CharMatcher(
+                char=char,
+                compare=lambda c: c not in WHITE_SPACES and unicodedata.category(c)[0] != 'Z'),
+            **kwargs)
+
+
+class NotAlphaNumNode(ShorthandNode):
+
+    def __init__(self, *, char: str, **kwargs) -> None:
+        super().__init__(
+            char=CharMatcher(char=char, compare=lambda c: not c.isalnum()),
+            **kwargs)
+
+
+class NotDigitNode(ShorthandNode):
+
+    def __init__(self, *, char: str, **kwargs) -> None:
+        super().__init__(
+            char=CharMatcher(char=char, compare=lambda c: not c.isdigit()),
             **kwargs)
 
 
