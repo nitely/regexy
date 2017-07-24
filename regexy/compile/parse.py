@@ -23,7 +23,8 @@ from ..shared.nodes import (
     StartNode,
     EndNode,
     AssertionNode,
-    WordBoundaryNode)
+    WordBoundaryNode,
+    AnyNode)
 from ..shared import Symbols
 
 
@@ -42,7 +43,8 @@ SYMBOLS = {
     Symbols.GROUP_START: GroupNode,
     Symbols.GROUP_END: GroupNode,
     Symbols.START: StartNode,
-    Symbols.END: EndNode}
+    Symbols.END: EndNode,
+    Symbols.ANY: AnyNode}
 
 
 SHORTHANDS = {

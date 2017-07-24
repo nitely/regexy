@@ -172,6 +172,14 @@ class DigitNode(ShorthandNode):
             **kwargs)
 
 
+class AnyNode(CharNode):
+
+    def __init__(self, *, char: str, **kwargs) -> None:
+        super().__init__(
+            char=CharMatcher(char=char, compare=lambda c: c != '\n'),
+            **kwargs)
+
+
 class SetMatcher:
 
     def __init__(
