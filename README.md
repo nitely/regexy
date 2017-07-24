@@ -27,7 +27,7 @@ Mostly based on Thompson's NFA.
 - [x] non-capturing groups
 - [x] Greedy and non-greedy match
 - [x] `^` and `$` symbols
-- [ ] `\b`
+- [x] `\b` word boundary
 - [ ] Named capturing groups
 - [ ] Sets complement
 - [ ] Match any (dot)

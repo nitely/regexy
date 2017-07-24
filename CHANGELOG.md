@@ -1,7 +1,12 @@
+0.10.0
+==================
+
+* Add `\b` word boundary (empty match)
+
 0.9.0
 ==================
 
-* Add start `^` and end `$` empty matches
+* Add start `^` and end `$` (empty matches)
 
 0.8.0
 ==================
