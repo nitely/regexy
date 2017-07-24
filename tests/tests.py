@@ -388,3 +388,14 @@ class RegexyTest(unittest.TestCase):
         self.assertEqual(
             match(r'(a){1,}?(a){1,}?(a)?', 'aaa'),
             (('a',), ('a',), 'a'))
+
+    def test_assertions(self):
+        # todo: match is currently a full_match so this does not test much
+        self.assertEqual(
+            match(r'^a$', 'a'), ())
+        self.assertEqual(
+            match(r'^a$', 'ab'), None)
+        self.assertEqual(
+            match(r'^(a)$', 'a'), ('a',))
+        self.assertEqual(
+            match(r'^$', ''), ())
