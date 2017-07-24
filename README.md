@@ -26,12 +26,15 @@ Mostly based on Thompson's NFA.
 - [x] Repetition ranges `{n, m}`
 - [x] non-capturing groups
 - [x] Greedy and non-greedy match
+- [x] `^` and `$` symbols
+- [ ] `\b`
 - [ ] Named capturing groups
 - [ ] Sets complement
 - [ ] Match any (dot)
 - [ ] Search
-- [ ] `^` and `$` symbols
+- [ ] Full_match
 - [ ] User friendly compiling errors
+- [ ] Sets `\b` support (?)
 - [ ] ... ?
 
 ## Compatibility
