@@ -37,8 +37,10 @@ SYMBOLS = {
 SHORTHANDS = {
     'w': nodes.AlphaNumNode,
     'd': nodes.DigitNode,
+    's': nodes.WhiteSpaceNode,
     'W': nodes.NotAlphaNumNode,
-    'D': nodes.NotDigitNode}
+    'D': nodes.NotDigitNode,
+    'S': nodes.NotWhiteSpaceNode}
 
 
 ASSERTIONS = {
