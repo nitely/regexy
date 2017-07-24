@@ -29,8 +29,8 @@ Mostly based on Thompson's NFA.
 - [x] `^` and `$` symbols
 - [x] `\b` word boundary
 - [x] Match any (dot)
+- [x] Sets complement
 - [ ] Named capturing groups
-- [ ] Sets complement
 - [ ] Search
 - [ ] Full_match
 - [ ] User friendly compiling errors
