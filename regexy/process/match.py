@@ -126,7 +126,7 @@ def curr_states(
     :param captured: current capture
     :return: one or more states
     """
-    return _next_states(state, captured, chars=chars, visited=set())
+    return _next_states(state, captured, chars, visited=set())
 
 
 def _peek(iterator, sof, eof):

@@ -410,3 +410,17 @@ class RegexyTest(unittest.TestCase):
         self.assertEqual(
             match(r'^([\w ]*?)(\bis\b)([\w ]*?)$', 'This island is great'),
             ('This island ', 'is', ' great'))
+
+    def test_dot_any_matcher(self):
+        self.assertEqual(
+            match(r'.', 'a'), ())
+        self.assertEqual(
+            match(r'.*', 'asd123!@#'), ())
+        self.assertEqual(
+            match(r'.*', '| (•□•) | (❍ᴥ❍ʋ)'), ())
+        self.assertEqual(
+            match(r'(.*)', 'ฅ^•ﻌ•^ฅ'), ('ฅ^•ﻌ•^ฅ',))
+        self.assertEqual(
+            match(r'.', '\t'), ())
+        self.assertEqual(
+            match(r'.', '\n'), None)

@@ -30,3 +30,4 @@ class Symbols:
     REPETITION_RANGE = '{n,m}'
     START = '^'
     END = '$'
+    ANY = '.'
