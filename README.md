@@ -21,7 +21,7 @@ Mostly based on Thompson's NFA.
 - [x] Basic operators: `*`, `?`, `+` and `|`
 - [x] Capturing groups
 - [x] Symbols escaping
-- [x] Shorthands: `\w` and `\d`
+- [x] Shorthands: `\w`, `\d`, `\s`, `\W`, `\D`, `\S`
 - [x] Sets `[...]` (+ ranges and shorthands)
 - [x] Repetition ranges `{n, m}`
 - [x] non-capturing groups
@@ -34,7 +34,7 @@ Mostly based on Thompson's NFA.
 - [ ] Search
 - [ ] Full_match
 - [ ] User friendly compiling errors
-- [ ] Sets `\b` support (?)
+- [ ] Sets `\b` support (python does not supported so proly not)
 - [ ] ... ?
 
 ## Compatibility
