@@ -24,7 +24,9 @@ __all__ = [
     'SetNode',
     'ShorthandNode',
     'AlphaNumNode',
-    'DigitNode']
+    'DigitNode',
+    'StartNode',
+    'EndNode']
 
 
 class Node:
@@ -95,6 +97,24 @@ class GroupNode(SymbolNode):
         self.index = index
         self.is_repeated = is_repeated
         self.is_capturing = is_capturing
+
+
+class AssertionNode(SymbolNode):
+
+    def match(self, char, next_char):
+        raise NotImplementedError
+
+
+class StartNode(AssertionNode):
+
+    def match(self, char, next_char):
+        return not char
+
+
+class EndNode(AssertionNode):
+
+    def match(self, char, next_char):
+        return not next_char
 
 
 class RepetitionRangeNode(OpNode):

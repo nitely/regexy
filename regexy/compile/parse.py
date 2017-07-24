@@ -19,7 +19,10 @@ from ..shared.nodes import (
     AlphaNumNode,
     DigitNode,
     SetNode,
-    RepetitionRangeNode)
+    RepetitionRangeNode,
+    StartNode,
+    EndNode,
+    AssertionNode)
 from ..shared import Symbols
 
 
@@ -36,7 +39,9 @@ SYMBOLS = {
     Symbols.ONE_OR_MORE: OpNode,
     Symbols.OR: OpNode,
     Symbols.GROUP_START: GroupNode,
-    Symbols.GROUP_END: GroupNode}
+    Symbols.GROUP_END: GroupNode,
+    Symbols.START: StartNode,
+    Symbols.END: EndNode}
 
 
 SHORTHANDS = {
@@ -277,7 +282,7 @@ def join_atoms(nodes: Iterator[Node]) -> Iterator[Node]:
     atoms_count = 0
 
     for node in nodes:
-        if isinstance(node, CharNode):
+        if isinstance(node, (CharNode, AssertionNode)):
             atoms_count += 1
 
             if atoms_count > 1:

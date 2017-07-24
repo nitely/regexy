@@ -17,7 +17,8 @@ from ..shared.nodes import (
     CharNode,
     RepetitionRangeNode,
     OpNode,
-    SkipNode)
+    SkipNode,
+    AssertionNode)
 from ..shared import Symbols
 
 
@@ -173,7 +174,7 @@ def nfa(nodes: Iterator[Node]) -> Node:
         return SkipNode(out=[EOF])
 
     for node in nodes:
-        if isinstance(node, CharNode):
+        if isinstance(node, (CharNode, AssertionNode)):
             node.out = [EOF]
             states.append(node)
             continue
