@@ -28,9 +28,9 @@ Mostly based on Thompson's NFA.
 - [x] Greedy and non-greedy match
 - [x] `^` and `$` symbols
 - [x] `\b` word boundary
+- [x] Match any (dot)
 - [ ] Named capturing groups
 - [ ] Sets complement
-- [ ] Match any (dot)
 - [ ] Search
 - [ ] Full_match
 - [ ] User friendly compiling errors
