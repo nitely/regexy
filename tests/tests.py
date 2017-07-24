@@ -240,6 +240,29 @@ class RegexyTest(unittest.TestCase):
         self.assertIsNone(match(r'[]]', '['))
         self.assertIsNone(match(r'[]]', ']]'))
 
+    def test_not_set(self):
+        self.assertIsNone(match(r'[^a]', 'a'))
+        self.assertEqual(match(r'([^b])', 'a'), ('a',))
+        self.assertEqual(match(r'([^b]*)', 'asd'), ('asd',))
+        self.assertEqual(match(r'([^b]*)', 'ab'), None)
+        self.assertEqual(match(r'([^b]*b)', 'ab'), ('ab',))
+        self.assertEqual(
+            match(r'([^\d]*)(\d*)', 'asd123'),
+            ('asd', '123'))
+        self.assertEqual(
+            match(r'([asd]*)([^asd]*)', 'asd123'),
+            ('asd', '123'))
+        self.assertEqual(
+            match(r'(<[^>]*>)', '<asd123!@#>'),
+            ('<asd123!@#>',))
+        self.assertIsNotNone(match(r'[^]', '^'))
+        self.assertIsNotNone(match(r'[\^]', '^'))
+        self.assertIsNotNone(match(r'[\^a]', 'a'))
+        self.assertIsNone(match(r'[^^]', '^'))
+        self.assertIsNotNone(match(r'[^^]', 'a'))
+        self.assertIsNotNone(match(r'[^-]', 'a'))
+        self.assertIsNone(match(r'[^-]', '-'))
+
     def test_repetition_range_expand(self):
         self.assertEqual(to_nfa_str(r'a{0}'), to_nfa_str(r''))
         self.assertEqual(to_nfa_str(r'a{1}'), to_nfa_str(r'a'))

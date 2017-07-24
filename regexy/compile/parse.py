@@ -65,12 +65,20 @@ def parse_set(expression: Iterator[Tuple[str, str]], *args) -> nodes.SetNode:
     shorthands = []
     is_range = False
     is_escaped = False
+    is_complement = False
 
     for char, _nxt in expression:
         if (char == ']' and
                 not is_escaped and
                 (chars or ranges or shorthands)):
             break
+
+        if (char == '^' and
+                not is_complement and
+                not is_escaped and
+                not (chars or ranges or shorthands)):
+            is_complement = True
+            continue
 
         if char == '\\' and not is_escaped:
             is_escaped = True
@@ -107,7 +115,11 @@ def parse_set(expression: Iterator[Tuple[str, str]], *args) -> nodes.SetNode:
     assert chars or ranges or shorthands
     assert char == ']'
 
-    return nodes.SetNode(
+    set_nodes = {
+        True: nodes.SetNode,
+        False: nodes.NotSetNode}
+
+    return set_nodes[not is_complement](
         chars=chars,
         ranges=ranges,
         shorthands=shorthands)
