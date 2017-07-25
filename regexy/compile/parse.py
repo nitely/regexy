@@ -44,7 +44,9 @@ SHORTHANDS = {
 
 
 ASSERTIONS = {
-    'b': nodes.WordBoundaryNode}
+    'b': nodes.WordBoundaryNode,
+    'A': nodes.StartNode,
+    'z': nodes.EndNode}
 
 
 ESCAPED_CHARS = {**SHORTHANDS, **ASSERTIONS}
