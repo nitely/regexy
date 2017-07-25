@@ -130,6 +130,18 @@ class WordBoundaryNode(AssertionNode):
             (not is_char_w and is_next_char_w))
 
 
+class NotWordBoundaryNode(AssertionNode):
+
+    def match(self, char, next_char):
+        is_char_w = char.isalnum()
+        is_next_char_w = next_char.isalnum()
+        return not (
+            (not char and is_next_char_w) or
+            (is_char_w and not next_char) or
+            (is_char_w and not is_next_char_w) or
+            (not is_char_w and is_next_char_w))
+
+
 class LookaheadNode(AssertionNode):
 
     def __init__(self, *, node, **kwargs) -> None:
