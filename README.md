@@ -31,6 +31,8 @@ Mostly based on Thompson's NFA.
 - [x] Match any (dot)
 - [x] Sets complement
 - [x] Lookahead assertion `(?=...)` and `(?!...)` (limited to a single char)
+- [x] Assertions `\A`, `\z`, `\B`
+- [ ] Flags
 - [ ] Named capturing groups
 - [ ] Search
 - [ ] Full_match
