@@ -464,6 +464,17 @@ class RegexyTest(unittest.TestCase):
             match(r'^([\w ]*?)(\bis\b)([\w ]*?)$', 'This island is great'),
             ('This island ', 'is', ' great'))
 
+        self.assertIsNone(match(r'\Ba\B', 'a'))
+        self.assertIsNone(
+            match(r'([\w ]*?)(\Baa\B)([\w ]*?)', 'bbaa aa'))
+        self.assertIsNone(
+            match(r'([\w ]*)(\Baa\B)([\w ]*)', 'aa bbaa'))
+        self.assertEqual(
+            match(r'^([\w ]*?)(\Baa\B)([\w ]*?)$', 'bbaabb'), ('bb', 'aa', 'bb'))
+        self.assertEqual(
+            match(r'^([\w ]*?)(\Bis\B)([\w ]*?)$', 'This is my sister'),
+            ('This is my s', 'is', 'ter'))
+
         self.assertEqual(
             match(r'\Aa\z', 'a'), ())
         self.assertEqual(

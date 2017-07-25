@@ -45,6 +45,7 @@ SHORTHANDS = {
 
 ASSERTIONS = {
     'b': nodes.WordBoundaryNode,
+    'B': nodes.NotWordBoundaryNode,
     'A': nodes.StartNode,
     'z': nodes.EndNode}
 
