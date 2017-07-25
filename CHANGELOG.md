@@ -1,3 +1,9 @@
+0.16.0
+==================
+
+* Add named groups
+* `match` returns a `Match` object now
+
 0.15.0
 ==================
 
