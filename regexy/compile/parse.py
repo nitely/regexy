@@ -168,22 +168,44 @@ def parse_repetition_range(
         end=end)
 
 
-def parse_group_tag(expression: Iterator[Tuple[str, str]], next_char: str) -> nodes.GroupNode:
-    yield nodes.GroupNode(
-        char=Symbols.GROUP_START,
-        is_capturing=next_char != '?')
-
+def parse_group_tag(
+        expression: Iterator[Tuple[str, str]],
+        next_char: str) -> nodes.GroupNode:
     # A regular group
     if next_char != '?':
+        yield nodes.GroupNode(
+            char=Symbols.GROUP_START)
         return
 
-    next(expression)  # Consume "("
+    next(expression)  # Consume "?"
     char, nxt = next(expression)
 
     if char == ':':
+        yield nodes.GroupNode(
+            char=Symbols.GROUP_START,
+            is_capturing=False)
+        return
+
+    if (char, nxt) == ('P', '<'):
+        next(expression)  # Consume "<"
+        name = []
+
+        for char, nxt in expression:
+            if char == '>':
+                break
+
+            name.append(char)
+
+        yield nodes.GroupNode(
+            char=Symbols.GROUP_START,
+            name=''.join(name))
         return
 
     if char in LOOKAHEAD_ASSERTIONS:
+        yield nodes.GroupNode(
+            char=Symbols.GROUP_START,
+            is_capturing=False)
+
         lookahead = LOOKAHEAD_ASSERTIONS[char]
         char, nxt = next(expression)
 
@@ -358,7 +380,7 @@ def join_atoms(expression_nodes: Iterator[nodes.Node]) -> Iterator[nodes.Node]:
         raise ValueError('Unhandled node %s' % repr(node))
 
 
-def fill_groups(expression_nodes: List[nodes.Node]) -> int:
+def fill_groups(expression_nodes: List[nodes.Node]) -> Tuple[int, dict]:
     """
     Fill groups with missing data.\
     This is index of group, whether\
@@ -372,6 +394,7 @@ def fill_groups(expression_nodes: List[nodes.Node]) -> int:
     :return: number of groups
     :private:
     """
+    named_groups = {}  # {name: index}
     groups_count = 0
     groups = []
     groups_non_capt = []
@@ -388,6 +411,9 @@ def fill_groups(expression_nodes: List[nodes.Node]) -> int:
                 groups_non_capt.append(node)
                 groups.append(node)
                 continue
+
+            if node.name:
+                named_groups[node.name] = groups_count
 
             node.index = groups_count
             groups_count += 1
@@ -417,4 +443,6 @@ def fill_groups(expression_nodes: List[nodes.Node]) -> int:
 
     assert not groups
 
-    return groups_count
+    return (
+        groups_count,
+        named_groups)

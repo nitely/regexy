@@ -10,10 +10,18 @@ from regexy.compile import to_atoms
 logging.disable(logging.CRITICAL)
 
 
-def match(expression, text):
+def new_match(expression, text):
     return regexy.match(
-        regexy.compile(expression),
-        text)
+        regexy.compile(expression), text)
+
+
+def match(expression, text):
+    m = new_match(expression, text)
+
+    if not m:
+        return None
+
+    return m.groups()
 
 
 def to_nfa_str(expression):
@@ -27,6 +35,10 @@ class RegexyTest(unittest.TestCase):
 
     def tearDown(self):
         pass
+
+    def test_new_match(self):
+        self.assertIsNotNone(new_match('a', 'a'))
+        self.assertIsNone(new_match('b', 'a'))
 
     def test_match(self):
         self.assertIsNotNone(match('', ''))
@@ -513,3 +525,45 @@ class RegexyTest(unittest.TestCase):
         self.assertEqual(match(r'a(?!b).*', 'ac'), ())
         self.assertEqual(match(r'(a(?!b).*)', 'ac'), ('ac',))
         self.assertEqual(match(r'(a)(?!b)(.*)', 'ac'), ('a', 'c'))
+
+    def test_group(self):
+        self.assertEqual(
+            new_match(r'(\w*)', 'foobar').group(0),
+            'foobar')
+        self.assertEqual(
+            new_match(r'(?P<foo>\w*)', 'foobar').group(0),
+            'foobar')
+        self.assertEqual(
+            new_match(r'(a)(b)', 'ab').group(0), 'a')
+        self.assertEqual(
+            new_match(r'(a)(b)', 'ab').group(1), 'b')
+        self.assertEqual(
+            new_match(r'(a)(b)', 'ab').groups(), ('a', 'b'))
+
+    def test_named_groups(self):
+        self.assertEqual(
+            new_match(r'(?P<foo>\w*)', 'foobar').group_name('foo'),
+            'foobar')
+        self.assertEqual(
+            new_match(r'(?P<foo>(?P<bar>\w*))', 'foobar').group_name('foo'),
+            'foobar')
+        self.assertEqual(
+            new_match(r'(?P<foo>(?P<bar>\w*))', 'foobar').group_name('bar'),
+            'foobar')
+        self.assertEqual(
+            new_match(r'(?P<foo>(?P<bar>\w*))', 'foobar').named_groups(),
+            {'foo': 'foobar',
+             'bar': 'foobar'})
+        self.assertEqual(
+            new_match(r'(?P<foo>(?P<bar>a)*b)', 'aab').group_name('foo'),
+            'aab')
+        self.assertEqual(
+            new_match(r'(?P<foo>(?P<bar>a)*b)', 'aab').group_name('bar'),
+            ('a', 'a'))
+        self.assertEqual(
+            new_match(r'(?P<foo>(?P<bar>a)*b)', 'aab').named_groups(),
+            {'foo': 'aab',
+             'bar': ('a', 'a')})
+        self.assertEqual(
+            new_match(r'((?P<bar>a)*b)', 'aab').group_name('bar'),
+            ('a', 'a'))
