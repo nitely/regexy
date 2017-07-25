@@ -285,8 +285,8 @@ def parse(expression: str) -> Iterator[nodes.Node]:
     assert not is_escaped
 
 
-def greediness(expression_nodes: Iterator[nodes.Node]) -> Iterator[nodes.Node]:
-    nodes_it = _peek(expression_nodes)
+def greediness(expression: Iterator[nodes.Node]) -> Iterator[nodes.Node]:
+    nodes_it = _peek(expression)
 
     for node, next_node in nodes_it:
         # todo: make RepetitionNode?
@@ -308,7 +308,7 @@ def greediness(expression_nodes: Iterator[nodes.Node]) -> Iterator[nodes.Node]:
         yield node
 
 
-def join_atoms(expression_nodes: Iterator[nodes.Node]) -> Iterator[nodes.Node]:
+def join_atoms(expression: Iterator[nodes.Node]) -> Iterator[nodes.Node]:
     """
     Add joiners to a sequence of nodes.\
     Joiners are meant to join sets\
@@ -343,7 +343,7 @@ def join_atoms(expression_nodes: Iterator[nodes.Node]) -> Iterator[nodes.Node]:
     """
     atoms_count = 0
 
-    for node in expression_nodes:
+    for node in expression:
         if isinstance(node, (nodes.CharNode, nodes.AssertionNode)):
             atoms_count += 1
 
@@ -380,7 +380,7 @@ def join_atoms(expression_nodes: Iterator[nodes.Node]) -> Iterator[nodes.Node]:
         raise ValueError('Unhandled node %s' % repr(node))
 
 
-def fill_groups(expression_nodes: List[nodes.Node]) -> Tuple[int, dict]:
+def fill_groups(expression: List[nodes.Node]) -> Tuple[int, dict]:
     """
     Fill groups with missing data.\
     This is index of group, whether\
@@ -399,7 +399,7 @@ def fill_groups(expression_nodes: List[nodes.Node]) -> Tuple[int, dict]:
     groups = []
     groups_non_capt = []
 
-    for index, node in enumerate(expression_nodes):
+    for node, next_node in _peek(expression, eof=nodes.SkipNode()):
         if isinstance(node, nodes.CharNode):
             node.is_captured = len(groups) - len(groups_non_capt) > 0
             continue
@@ -428,16 +428,10 @@ def fill_groups(expression_nodes: List[nodes.Node]) -> Tuple[int, dict]:
                 node.is_capturing = False
                 continue
 
-            try:
-                next_node = expression_nodes[index + 1]
-            except IndexError:
-                start.is_repeated = False
-            else:
-                start.is_repeated = next_node.char in (
-                    Symbols.ZERO_OR_MORE,
-                    Symbols.ONE_OR_MORE,
-                    Symbols.REPETITION_RANGE)
-
+            start.is_repeated = next_node.char in (
+                Symbols.ZERO_OR_MORE,
+                Symbols.ONE_OR_MORE,
+                Symbols.REPETITION_RANGE)
             node.index = start.index
             node.is_repeated = start.is_repeated
 
