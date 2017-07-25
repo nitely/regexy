@@ -31,6 +31,31 @@ from .captures import (
 __all__ = ['match']
 
 
+class Match:
+
+    __slots__ = (
+        '_captures',
+        '_named_groups')
+
+    def __init__(self, captures: tuple, named_groups: dict):
+        self._captures = captures
+        self._named_groups = named_groups
+
+    def group(self, index):
+        return self._captures[index]
+
+    def groups(self):
+        return self._captures
+
+    def group_name(self, name):
+        return self._captures[self._named_groups[name]]
+
+    def named_groups(self):
+        return {
+            name: self._captures[index]
+            for name, index in self._named_groups.items()}
+
+
 def _get_match(states: List[Tuple[Node, Capture]]) -> Capture:
     """
     Find a state that ended with EOF\
@@ -195,4 +220,6 @@ def match(nfa: NFA, text: Iterator[str]) -> Union[MatchedType, None]:
     except exceptions.MatchError:
         return None
 
-    return captures.matched(captured, nfa.groups_count)
+    return Match(
+        captures=captures.matched(captured, nfa.groups_count),
+        named_groups=nfa.named_groups)
