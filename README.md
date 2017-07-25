@@ -60,13 +60,13 @@ Notice `regexy` returns all capturing groups specified within a repeated sub-exp
 import regexy
 
 regexy.match(regexy.compile(r'((a)*b)'), 'aab')
-# ('aab', ('a', 'a'))
+# Match<('aab', ('a', 'a'))>
 
 regexy.match(regexy.compile(r'a'), 'b')
 # None
 
 regexy.match(regexy.compile(r'a'), 'a')
-# ()
+# Match<()>
 ```
 
 Streams are supported (i.e: network and files)

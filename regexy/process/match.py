@@ -41,6 +41,9 @@ class Match:
         self._captures = captures
         self._named_groups = named_groups
 
+    def __repr__(self):
+        return '%s<%s>' % (self.__class__.__name__, self._captures)
+
     def group(self, index):
         return self._captures[index]
 
