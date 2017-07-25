@@ -168,7 +168,7 @@ def _peek(iterator, sof, eof):
     yield prev, eof
 
 
-def match(nfa: NFA, text: Iterator[str]) -> Union[MatchedType, None]:
+def match(nfa: NFA, text: Iterator[str]) -> Union[Match, None]:
     """
     Match works by going through the given text\
     and matching it to the current states\
