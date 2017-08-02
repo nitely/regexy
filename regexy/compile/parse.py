@@ -58,7 +58,7 @@ LOOKAHEAD_ASSERTIONS = {
     '!': nodes.NotLookaheadNode}
 
 
-def parse_set(expression: Iterator[Tuple[str, str]], *args) -> nodes.SetNode:
+def parse_set(expression: Iterator[Tuple[str, str]], **kwargs) -> Iterator[nodes.SetNode]:
     """
     Parse a set atom (``[...]``) into a SetNode
 
@@ -135,7 +135,7 @@ def parse_set(expression: Iterator[Tuple[str, str]], *args) -> nodes.SetNode:
 
 def parse_repetition_range(
         expression: Iterator[Tuple[str, str]],
-        *args) -> nodes.RepetitionRangeNode:
+        **kwargs) -> Iterator[nodes.RepetitionRangeNode]:
     start = []
     end = []
     curr = start
@@ -170,7 +170,9 @@ def parse_repetition_range(
 
 def parse_group_tag(
         expression: Iterator[Tuple[str, str]],
-        next_char: str) -> nodes.GroupNode:
+        *,
+        next_char: str,
+        **kwargs) -> Iterator[nodes.GroupNode]:
     # A regular group
     if next_char != '?':
         yield nodes.GroupNode(
@@ -263,7 +265,7 @@ def parse(expression: str) -> Iterator[nodes.Node]:
     :return: iterator of nodes
     :private:
     """
-    expression = _peek(iter(expression))
+    expression = _peek(expression)
     is_escaped = False
 
     for char, next_char in expression:
@@ -277,7 +279,7 @@ def parse(expression: str) -> Iterator[nodes.Node]:
             continue
 
         if char in SUB_PARSERS:
-            yield from SUB_PARSERS[char](expression, next_char)
+            yield from SUB_PARSERS[char](expression, next_char=next_char)
             continue
 
         yield SYMBOLS.get(char, nodes.CharNode)(char=char)
@@ -398,6 +400,7 @@ def fill_groups(expression: List[nodes.Node]) -> Tuple[int, dict]:
     groups_count = 0
     groups = []
     groups_non_capt = []
+    groups_all = []
 
     for node, next_node in _peek(expression, eof=nodes.SkipNode()):
         if isinstance(node, nodes.CharNode):
@@ -418,22 +421,34 @@ def fill_groups(expression: List[nodes.Node]) -> Tuple[int, dict]:
             node.index = groups_count
             groups_count += 1
             groups.append(node)
+            groups_all.append(node)
             continue
 
         if node.char == Symbols.GROUP_END:
             start = groups.pop()
 
-            if not start.is_capturing:
-                groups_non_capt.pop()
-                node.is_capturing = False
-                continue
-
             start.is_repeated = next_node.char in (
                 Symbols.ZERO_OR_MORE,
                 Symbols.ONE_OR_MORE,
                 Symbols.REPETITION_RANGE)
-            node.index = start.index
             node.is_repeated = start.is_repeated
+            node.index = start.index
+
+            # Mark inner groups as repeated
+            # todo: make function
+            for g in reversed(groups_all):
+                if g == start:
+                    break
+
+                g.is_repeated = g.is_repeated or start.is_repeated
+
+            if not start.is_capturing:
+                groups_non_capt.pop()
+                node.is_capturing = False
+
+            groups_all.append(node)
+
+
 
     assert not groups
 

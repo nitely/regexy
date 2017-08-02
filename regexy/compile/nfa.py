@@ -154,17 +154,19 @@ def nfa(nodes: Iterator[Node]) -> Node:
     Converts a sequence of nodes into a NFA\
     ready to be matched against a string
 
-    This creates the connections for every node.\
+    A NFA is a graph where each node is a state
+
+    This creates the connections for every state.\
     EOF is temporarily placed on latest created state ends\
-    and replaced by a connection to other node later,\
-    so leaf nodes are the only nodes containing an EOF\
+    and replaced by a connection to other state later,\
+    so leaf states are the only states containing an EOF\
     in the resulting NFA
 
     Repetition range operators are expanded (i.e: a{1,} -> aa*)
 
     :param nodes: an iterator of nodes\
     to be converted into a NFA
-    :return: the NFA first state/node
+    :return: the NFA first state
     :private:
     """
     states = []
