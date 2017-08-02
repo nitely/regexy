@@ -82,7 +82,15 @@ class RegexyTest(unittest.TestCase):
             match('(a*|b*)*', 'aaabbbaaa'),
             (('aaa', 'bbb', 'aaa'),))
         self.assertEqual(
-            match(r'(a(b))*', 'abab'), (('ab', 'ab'), 'bb'))  # fixme: should be (('ab', 'ab'), ('b', 'b'))
+            match(r'(a(b))*', 'abab'), (('ab', 'ab'), ('b', 'b')))
+
+        # These two should match the same
+        self.assertEqual(
+            match(r'((a)*n?(asd)*)*', 'aaanasdnasd'),
+            (('aaanasd', 'nasd'),('a', 'a', 'a'), ('asd', 'asd')))
+        self.assertEqual(
+            match(r'((a)*n?(asd))*', 'aaanasdnasd'),
+            (('aaanasd', 'nasd'), ('a', 'a', 'a'), ('asd', 'asd')))
 
     def test_to_atoms(self):
         self.assertEqual(to_atoms('a(b|c)*d'), 'a~(b|c)*~d')
@@ -385,22 +393,13 @@ class RegexyTest(unittest.TestCase):
             match(r'(?:a)', 'a'), ())
         self.assertEqual(
             match(r'(?:aaa)', 'aaa'), ())
-        # (a(b))* -> ((ab, ab), (b, b))
-        # (?:a(b))* -> ((b, b), )
-        # (a(?:b))* -> ((ab, ab), )
-        # (a(b(c)))* -> ((abc, abc), (bc, bc), (c, c))
-        # (a(b)*)* -> ((abb, abb), ((b, b), (b, b)))
-        # (a(b(c)*)*)* -> ((abbcc, abbcc), ((b, bcc), (b, bcc)), ((None, (c, c)), (None, (c, c))))
         self.assertEqual(
-            match(r'(a(b))*', 'abab'), (('ab', 'ab'), 'bb'))  # fixme
+            match(r'(a(b))*', 'abab'), (('ab', 'ab'), ('b', 'b')))
         self.assertEqual(
-            match(r'(?:a(b))*', 'abab'), ('bb',))  # fixme ^
+            match(r'(?:a(b))*', 'abab'), (('b', 'b'),))
         self.assertEqual(
             match(r'(a(?:b))*', 'abab'), (('ab', 'ab'), ))
         # self.assertIsNotNone(match(r'(\))', ')'))  # fixme
-
-        # self.assertIsNone(match(r'((a)*n?(asd))*', 'aaanasdnasd'))  # fixme
-        # should be equal to r'((a)*n?(asd)*)*' (see last capture)
 
     def test_greediness(self):
         self.assertEqual(

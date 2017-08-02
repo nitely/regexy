@@ -345,7 +345,7 @@ class SkipNode(Node):
     """
 
     def __init__(self, **kwargs) -> None:
-        super().__init__(char='', **kwargs)
+        super().__init__(char='SKIP', **kwargs)
 
 
 class EOFNode(Node):
