@@ -31,3 +31,18 @@ class Symbols:
     START = '^'
     END = '$'
     ANY = '.'
+
+
+class Flags:
+    """
+    i case-insensitive
+    m multi-line mode: ^ and $ match begin/end of line
+    s allow . to match \n
+    U swap the meaning of x* and x*?
+
+    :private:
+    """
+    CASE_INSENSITIVE = 'i'
+    MULTI_LINE = 'm'
+    ANY_MATCH_NEW_LINE = 's'
+    UN_GREEDY = 'U'

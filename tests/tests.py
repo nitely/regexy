@@ -398,7 +398,7 @@ class RegexyTest(unittest.TestCase):
         self.assertEqual(
             match(r'(?:a(b))*', 'abab'), (('b', 'b'),))
         self.assertEqual(
-            match(r'(a(?:b))*', 'abab'), (('ab', 'ab'), ))
+            match(r'(a(?:b))*', 'abab'), (('ab', 'ab'),))
         # self.assertIsNotNone(match(r'(\))', ')'))  # fixme
 
     def test_greediness(self):

@@ -448,8 +448,6 @@ def fill_groups(expression: List[nodes.Node]) -> Tuple[int, dict]:
 
             groups_all.append(node)
 
-
-
     assert not groups
 
     return (
