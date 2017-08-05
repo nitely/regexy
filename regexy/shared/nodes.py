@@ -93,12 +93,14 @@ class GroupNode(SymbolNode):
             index: int=None,
             is_repeated: bool=False,
             is_capturing: bool=True,
+            flags: Sequence[str]=None,
             name: str='',
             **kwargs) -> None:
         super().__init__(**kwargs)
         self.index = index
         self.is_repeated = is_repeated
         self.is_capturing = is_capturing
+        self.flags = flags or ()
         self.name = name
 
 

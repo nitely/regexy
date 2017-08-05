@@ -13,6 +13,7 @@ from typing import (
 
 from ..shared import nodes
 from ..shared import Symbols
+from ..shared import Flags
 
 
 __all__ = [
@@ -217,8 +218,31 @@ def parse_group_tag(
             yield lookahead(node=SHORTHANDS.get(char, nodes.CharNode)(char=char))
             return
 
-        assert nxt == ')'
+        assert nxt == Symbols.GROUP_END
         yield lookahead(node=nodes.CharNode(char=char))
+        return
+
+    if char in (
+            Flags.CASE_INSENSITIVE,
+            Flags.MULTI_LINE,
+            Flags.ANY_MATCH_NEW_LINE,
+            Flags.UN_GREEDY):
+        # TODO: add negate "-"
+        flags = [char]
+
+        for char, nxt in expression:
+            if char == ':':
+                break
+
+            flags.append(char)
+
+            if nxt == Symbols.GROUP_END:
+                break
+
+        yield nodes.GroupNode(
+            char=Symbols.GROUP_START,
+            is_capturing=False,
+            flags=flags)
         return
 
     assert False, 'unhandled group tag'
@@ -453,3 +477,36 @@ def fill_groups(expression: List[nodes.Node]) -> Tuple[int, dict]:
     return (
         groups_count,
         named_groups)
+
+
+def apply_flags(expression) -> None:
+    flags = []
+
+    for node, next_node in _peek(expression):
+        if isinstance(node, nodes.CharNode):
+            for f in flags:
+                pass
+
+            continue
+
+        # (?flags)
+        if (node.char == Symbols.GROUP_START and
+                node.flags and
+                isinstance(next_node, nodes.GroupNode) and
+                next_node.char == Symbols.GROUP_END):
+            next(expression)  # Skip group end
+
+            if flags:
+                flags[-1].extend(node.flags)
+            else:
+                flags.append(list(node.flags))
+
+            continue
+
+        if node.char == Symbols.GROUP_START:
+            flags.append(list(node.flags))
+            continue
+
+        if node.char == Symbols.GROUP_END:
+            flags.pop()
+            continue
