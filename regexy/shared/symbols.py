@@ -28,3 +28,6 @@ class Symbols:
     GROUP_START = '('
     GROUP_END = ')'
     REPETITION_RANGE = '{n,m}'
+    START = '^'
+    END = '$'
+    ANY = '.'

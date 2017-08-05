@@ -17,7 +17,8 @@ from ..shared.nodes import (
     EOF,
     CharNode,
     GroupNode,
-    Node)
+    Node,
+    AssertionNode)
 from ..shared import exceptions
 from ..shared.collections import StatesSet
 from ..compile.compile import NFA
@@ -28,6 +29,34 @@ from .captures import (
 
 
 __all__ = ['match']
+
+
+class Match:
+
+    __slots__ = (
+        '_captures',
+        '_named_groups')
+
+    def __init__(self, captures: tuple, named_groups: dict):
+        self._captures = captures
+        self._named_groups = named_groups
+
+    def __repr__(self):
+        return '%s<%s>' % (self.__class__.__name__, self._captures)
+
+    def group(self, index):
+        return self._captures[index]
+
+    def groups(self):
+        return self._captures
+
+    def group_name(self, name):
+        return self._captures[self._named_groups[name]]
+
+    def named_groups(self):
+        return {
+            name: self._captures[index]
+            for name, index in self._named_groups.items()}
 
 
 def _get_match(states: List[Tuple[Node, Capture]]) -> Capture:
@@ -50,7 +79,11 @@ def _get_match(states: List[Tuple[Node, Capture]]) -> Capture:
 NextStateType = Iterator[Tuple[Node, Capture]]
 
 
-def _next_states(state: Node, captured: Capture, visited: Set[Node]) -> NextStateType:
+def _next_states(
+        state: Node,
+        captured: Capture,
+        chars: Tuple[str, str],
+        visited: Set[Node]) -> NextStateType:
     """
     Go to next CharNode or EOF state.\
     Capture matches along the way
@@ -77,7 +110,12 @@ def _next_states(state: Node, captured: Capture, visited: Set[Node]) -> NextStat
         yield state, captured
         return
 
-    if isinstance(state, GroupNode) and state.is_capturing:
+    if (isinstance(state, AssertionNode) and
+            not state.match(*chars)):
+        return
+
+    if (isinstance(state, GroupNode) and
+            state.is_capturing):
         captured = captures.capture(
             char=state.char,
             prev=captured,
@@ -85,10 +123,13 @@ def _next_states(state: Node, captured: Capture, visited: Set[Node]) -> NextStat
             is_repeated=state.is_repeated)
 
     for s in state.out:
-        yield from _next_states(s, captured, visited)
+        yield from _next_states(s, captured, chars, visited)
 
 
-def next_states(state: Node, captured: Capture) -> NextStateType:
+def next_states(
+        state: Node,
+        captured: Capture,
+        chars: Tuple[str, str]) -> NextStateType:
     """
     Go to next states of the given state
 
@@ -98,10 +139,13 @@ def next_states(state: Node, captured: Capture) -> NextStateType:
     :private:
     """
     for s in state.out:
-        yield from _next_states(s, captured, set())
+        yield from _next_states(s, captured, chars, visited=set())
 
 
-def curr_states(state: Node, captured: Capture) -> NextStateType:
+def curr_states(
+        state: Node,
+        captured: Capture,
+        chars: Tuple[str, str]) -> NextStateType:
     """
     Return a state to match.\
     This may be the current state or a following one.
@@ -110,10 +154,21 @@ def curr_states(state: Node, captured: Capture) -> NextStateType:
     :param captured: current capture
     :return: one or more states
     """
-    return _next_states(state, captured, set())
+    return _next_states(state, captured, chars, visited=set())
 
 
-def match(nfa: NFA, text: str) -> Union[MatchedType, None]:
+def _peek(iterator, sof, eof):
+    iterator = iter(iterator)
+    prev = sof
+
+    for elm in iterator:
+        yield prev, elm
+        prev = elm
+
+    yield prev, eof
+
+
+def match(nfa: NFA, text: Iterator[str]) -> Union[Match, None]:
     """
     Match works by going through the given text\
     and matching it to the current states\
@@ -125,18 +180,23 @@ def match(nfa: NFA, text: str) -> Union[MatchedType, None]:
     an empty sequence if the regex has no groups or\
     ``None`` if no match is found
 
+    The iterator may not be fully consumed.
+
     :param nfa: a NFA
     :param text: a text to match against
     :return: match or ``None``
     """
+    text_it = _peek(text, sof='', eof='')
+
     curr_states_set = StatesSet()
     next_states_set = StatesSet()
 
     curr_states_set.extend(curr_states(
         state=nfa.state,
-        captured=None))
+        captured=None,
+        chars=next(text_it)))
 
-    for char in text:
+    for char, next_char in text_it:
         if not curr_states_set:
             break
 
@@ -151,7 +211,8 @@ def match(nfa: NFA, text: str) -> Union[MatchedType, None]:
 
             next_states_set.extend(next_states(
                 state=curr_state,
-                captured=captured))
+                captured=captured,
+                chars=(char, next_char)))
 
         curr_states_set, next_states_set = (
             next_states_set, curr_states_set)
@@ -162,4 +223,6 @@ def match(nfa: NFA, text: str) -> Union[MatchedType, None]:
     except exceptions.MatchError:
         return None
 
-    return captures.matched(captured, nfa.groups_count)
+    return Match(
+        captures=captures.matched(captured, nfa.groups_count),
+        named_groups=nfa.named_groups)

@@ -20,7 +20,8 @@ from ..shared.nodes import (
     CharNode,
     Node,
     SymbolNode,
-    OpNode)
+    OpNode,
+    AssertionNode)
 from ..shared import Symbols
 
 
@@ -124,7 +125,7 @@ def rpn(nodes: Iterator[Node]) -> Iterator[Node]:
     operators = []
 
     for node in nodes:
-        if isinstance(node, CharNode):
+        if isinstance(node, (CharNode, AssertionNode)):
             yield node
             continue
 

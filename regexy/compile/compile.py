@@ -34,7 +34,8 @@ __all__ = [
 
 NFA = collections.namedtuple('NFA', (
     'state',
-    'groups_count'))
+    'groups_count',
+    'named_groups'))
 NFA.__doc__ = """
     This contains the first state\
     of the NFA and the number of groups
@@ -69,10 +70,11 @@ def to_nfa(expression: str) -> NFA:
     :public:
     """
     nodes = list(_to_nodes(expression))
-    groups_count = fill_groups(nodes)
+    groups_count, named_groups = fill_groups(nodes)
     return NFA(
         state=nfa(rpn(nodes)),
-        groups_count=groups_count)
+        groups_count=groups_count,
+        named_groups=named_groups)
 
 
 def to_rpn(expression: str) -> str:

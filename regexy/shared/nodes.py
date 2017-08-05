@@ -8,6 +8,7 @@ the node types of the NFA
 :private:
 """
 
+import unicodedata
 from typing import (
     Sequence,
     Callable,
@@ -24,7 +25,9 @@ __all__ = [
     'SetNode',
     'ShorthandNode',
     'AlphaNumNode',
-    'DigitNode']
+    'DigitNode',
+    'StartNode',
+    'EndNode']
 
 
 class Node:
@@ -90,11 +93,75 @@ class GroupNode(SymbolNode):
             index: int=None,
             is_repeated: bool=False,
             is_capturing: bool=True,
+            name: str='',
             **kwargs) -> None:
         super().__init__(**kwargs)
         self.index = index
         self.is_repeated = is_repeated
         self.is_capturing = is_capturing
+        self.name = name
+
+
+class AssertionNode(SymbolNode):
+
+    def match(self, char, next_char) -> bool:
+        raise NotImplementedError
+
+
+class StartNode(AssertionNode):
+
+    def match(self, char, next_char):
+        return not char
+
+
+class EndNode(AssertionNode):
+
+    def match(self, char, next_char):
+        return not next_char
+
+
+class WordBoundaryNode(AssertionNode):
+
+    def match(self, char, next_char):
+        is_char_w = char.isalnum()
+        is_next_char_w = next_char.isalnum()
+        return (
+            (not char and is_next_char_w) or
+            (is_char_w and not next_char) or
+            (is_char_w and not is_next_char_w) or
+            (not is_char_w and is_next_char_w))
+
+
+class NotWordBoundaryNode(AssertionNode):
+
+    def match(self, char, next_char):
+        is_char_w = char.isalnum()
+        is_next_char_w = next_char.isalnum()
+        return not (
+            (not char and is_next_char_w) or
+            (is_char_w and not next_char) or
+            (is_char_w and not is_next_char_w) or
+            (not is_char_w and is_next_char_w))
+
+
+class LookaheadNode(AssertionNode):
+
+    def __init__(self, *, node, **kwargs) -> None:
+        super().__init__(char='?=%s' % node, **kwargs)
+        self._node = node
+
+    def match(self, char, next_char):
+        return next_char == self._node.char
+
+
+class NotLookaheadNode(AssertionNode):
+
+    def __init__(self, *, node, **kwargs) -> None:
+        super().__init__(char='?!%s' % node, **kwargs)
+        self._node = node
+
+    def match(self, char, next_char):
+        return next_char != self._node.char
 
 
 class RepetitionRangeNode(OpNode):
@@ -140,6 +207,58 @@ class DigitNode(ShorthandNode):
             **kwargs)
 
 
+# Whitespace characters according to python re
+WHITE_SPACES = frozenset(' \t\n\r\f\v')
+
+
+class WhiteSpaceNode(ShorthandNode):
+
+    def __init__(self, *, char: str, **kwargs) -> None:
+        super().__init__(
+            char=CharMatcher(
+                char=char,
+                compare=lambda c: (
+                    c in WHITE_SPACES or
+                    unicodedata.category(c)[0] == 'Z')),
+            **kwargs)
+
+
+class NotWhiteSpaceNode(ShorthandNode):
+
+    def __init__(self, *, char: str, **kwargs) -> None:
+        super().__init__(
+            char=CharMatcher(
+                char=char,
+                compare=lambda c: (
+                    c not in WHITE_SPACES and
+                    unicodedata.category(c)[0] != 'Z')),
+            **kwargs)
+
+
+class NotAlphaNumNode(ShorthandNode):
+
+    def __init__(self, *, char: str, **kwargs) -> None:
+        super().__init__(
+            char=CharMatcher(char=char, compare=lambda c: not c.isalnum()),
+            **kwargs)
+
+
+class NotDigitNode(ShorthandNode):
+
+    def __init__(self, *, char: str, **kwargs) -> None:
+        super().__init__(
+            char=CharMatcher(char=char, compare=lambda c: not c.isdigit()),
+            **kwargs)
+
+
+class AnyNode(CharNode):
+
+    def __init__(self, *, char: str, **kwargs) -> None:
+        super().__init__(
+            char=CharMatcher(char=char, compare=lambda c: c != '\n'),
+            **kwargs)
+
+
 class SetMatcher:
 
     def __init__(
@@ -148,9 +267,9 @@ class SetMatcher:
             chars: Iterator[str],
             ranges: Iterator[Tuple[str, str]],
             shorthands: Iterator[CharMatcher]) -> None:
-        self._chars = set(chars)
-        self._ranges = list(ranges)  # todo: interval tree
-        self._shorthands = list(shorthands)
+        self._chars = frozenset(chars)
+        self._ranges = tuple(ranges)  # todo: interval tree
+        self._shorthands = tuple(shorthands)
 
     def __eq__(self, other: str) -> bool:
         return (
@@ -187,6 +306,35 @@ class SetNode(CharNode):
             **kwargs)
 
 
+class NotSetMatcher:
+
+    def __init__(self, **kwargs) -> None:
+        self._matcher = SetMatcher(**kwargs)
+
+    def __eq__(self, other: str) -> bool:
+        return other != self._matcher
+
+    def __repr__(self) -> str:
+        return '[^%s]' % repr(self._matcher)[1:-1]
+
+
+class NotSetNode(CharNode):
+
+    def __init__(
+            self,
+            *,
+            chars: Iterator[str],
+            ranges: Iterator[Tuple[str, str]],
+            shorthands: Iterator[CharMatcher],
+            **kwargs) -> None:
+        super().__init__(
+            char=NotSetMatcher(
+                chars=chars,
+                ranges=ranges,
+                shorthands=shorthands),
+            **kwargs)
+
+
 class SkipNode(Node):
     """
     A node that should be skipped.\
@@ -197,7 +345,7 @@ class SkipNode(Node):
     """
 
     def __init__(self, **kwargs) -> None:
-        super().__init__(char='', **kwargs)
+        super().__init__(char='SKIP', **kwargs)
 
 
 class EOFNode(Node):

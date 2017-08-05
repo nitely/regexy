@@ -21,17 +21,23 @@ Mostly based on Thompson's NFA.
 - [x] Basic operators: `*`, `?`, `+` and `|`
 - [x] Capturing groups
 - [x] Symbols escaping
-- [x] Shorthands: `\w` and `\d`
+- [x] Shorthands: `\w`, `\d`, `\s`, `\W`, `\D`, `\S`
 - [x] Sets `[...]` (+ ranges and shorthands)
 - [x] Repetition ranges `{n, m}`
 - [x] non-capturing groups
 - [x] Greedy and non-greedy match
-- [ ] Named capturing groups
-- [ ] Sets complement
-- [ ] Match any (dot)
+- [x] `^` and `$` symbols
+- [x] `\b` word boundary
+- [x] Match any (dot)
+- [x] Sets complement
+- [x] Lookahead assertion `(?=...)` and `(?!...)` (limited to a single char)
+- [x] Assertions `\A`, `\z`, `\B`
+- [x] Named capturing groups
+- [ ] Flags
 - [ ] Search
-- [ ] `^` and `$` symbols
+- [ ] Full_match
 - [ ] User friendly compiling errors
+- [ ] Sets `\b` support (python does not supported so proly not)
 - [ ] ... ?
 
 ## Compatibility
@@ -54,13 +60,13 @@ Notice `regexy` returns all capturing groups specified within a repeated sub-exp
 import regexy
 
 regexy.match(regexy.compile(r'((a)*b)'), 'aab')
-# ('aab', ('a', 'a'))
+# Match<('aab', ('a', 'a'))>
 
 regexy.match(regexy.compile(r'a'), 'b')
 # None
 
 regexy.match(regexy.compile(r'a'), 'a')
-# ()
+# Match<()>
 ```
 
 Streams are supported (i.e: network and files)

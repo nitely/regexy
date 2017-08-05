@@ -10,10 +10,18 @@ from regexy.compile import to_atoms
 logging.disable(logging.CRITICAL)
 
 
-def match(expression, text):
+def new_match(expression, text):
     return regexy.match(
-        regexy.compile(expression),
-        text)
+        regexy.compile(expression), text)
+
+
+def match(expression, text):
+    m = new_match(expression, text)
+
+    if not m:
+        return None
+
+    return m.groups()
 
 
 def to_nfa_str(expression):
@@ -27,6 +35,10 @@ class RegexyTest(unittest.TestCase):
 
     def tearDown(self):
         pass
+
+    def test_new_match(self):
+        self.assertIsNotNone(new_match('a', 'a'))
+        self.assertIsNone(new_match('b', 'a'))
 
     def test_match(self):
         self.assertIsNotNone(match('', ''))
@@ -70,7 +82,15 @@ class RegexyTest(unittest.TestCase):
             match('(a*|b*)*', 'aaabbbaaa'),
             (('aaa', 'bbb', 'aaa'),))
         self.assertEqual(
-            match(r'(a(b))*', 'abab'), (('ab', 'ab'), 'bb'))  # fixme: should be (('ab', 'ab'), ('b', 'b'))
+            match(r'(a(b))*', 'abab'), (('ab', 'ab'), ('b', 'b')))
+
+        # These two should match the same
+        self.assertEqual(
+            match(r'((a)*n?(asd)*)*', 'aaanasdnasd'),
+            (('aaanasd', 'nasd'),('a', 'a', 'a'), ('asd', 'asd')))
+        self.assertEqual(
+            match(r'((a)*n?(asd))*', 'aaanasdnasd'),
+            (('aaanasd', 'nasd'), ('a', 'a', 'a'), ('asd', 'asd')))
 
     def test_to_atoms(self):
         self.assertEqual(to_atoms('a(b|c)*d'), 'a~(b|c)*~d')
@@ -126,6 +146,35 @@ class RegexyTest(unittest.TestCase):
         self.assertEqual(match(r'(\d)', '1'), ('1',))
         self.assertIsNotNone(match(r'\d', '۲'))  # Kharosthi numeral
         self.assertIsNone(match(r'\d', '⅕'))
+
+    def test_white_space_shorthand(self):
+        self.assertIsNotNone(match(r'\s', ' '))
+        self.assertIsNotNone(match(r'\s*', '   '))
+        self.assertIsNotNone(match(r'\s*', ' \t\n\r\f\v'))
+        self.assertIsNotNone(match(r'\s', '\u2028'))  # Line separator
+
+    def test_alphanum_not_shorthand(self):
+        self.assertIsNone(match(r'\W', 'a'))
+        self.assertIsNone(match(r'\W*', 'abc123'))
+        self.assertIsNotNone(match(r'\W+', '!@#'))
+
+    def test_not_digit(self):
+        self.assertIsNone(match(r'\D', '1'))
+        self.assertIsNone(match(r'\D*', '123'))
+        self.assertIsNone(match(r'\D', '۲'))  # Kharosthi numeral
+        self.assertIsNotNone(match(r'\D', '⅕'))
+        self.assertIsNotNone(match(r'\D+', '!@#'))
+
+    def test_not_white_space_shorthand(self):
+        self.assertIsNotNone(match(r'\S*', 'asd123!@#'))
+        self.assertIsNone(match(r'\S', ' '))
+        self.assertIsNone(match(r'\S*', '   '))
+        self.assertIsNone(match(r'\S', '\t'))
+        self.assertIsNone(match(r'\S', '\n'))
+        self.assertIsNone(match(r'\S', '\r'))
+        self.assertIsNone(match(r'\S', '\f'))
+        self.assertIsNone(match(r'\S', '\v'))
+        self.assertIsNone(match(r'\S', '\u2028'))  # Line separator
 
     def test_set(self):
         self.assertIsNotNone(match(r'[a]', 'a'))
@@ -210,6 +259,29 @@ class RegexyTest(unittest.TestCase):
         self.assertIsNotNone(match(r'[\]]', ']'))
         self.assertIsNone(match(r'[]]', '['))
         self.assertIsNone(match(r'[]]', ']]'))
+
+    def test_not_set(self):
+        self.assertIsNone(match(r'[^a]', 'a'))
+        self.assertEqual(match(r'([^b])', 'a'), ('a',))
+        self.assertEqual(match(r'([^b]*)', 'asd'), ('asd',))
+        self.assertEqual(match(r'([^b]*)', 'ab'), None)
+        self.assertEqual(match(r'([^b]*b)', 'ab'), ('ab',))
+        self.assertEqual(
+            match(r'([^\d]*)(\d*)', 'asd123'),
+            ('asd', '123'))
+        self.assertEqual(
+            match(r'([asd]*)([^asd]*)', 'asd123'),
+            ('asd', '123'))
+        self.assertEqual(
+            match(r'(<[^>]*>)', '<asd123!@#>'),
+            ('<asd123!@#>',))
+        self.assertIsNotNone(match(r'[^]', '^'))
+        self.assertIsNotNone(match(r'[\^]', '^'))
+        self.assertIsNotNone(match(r'[\^a]', 'a'))
+        self.assertIsNone(match(r'[^^]', '^'))
+        self.assertIsNotNone(match(r'[^^]', 'a'))
+        self.assertIsNotNone(match(r'[^-]', 'a'))
+        self.assertIsNone(match(r'[^-]', '-'))
 
     def test_repetition_range_expand(self):
         self.assertEqual(to_nfa_str(r'a{0}'), to_nfa_str(r''))
@@ -321,22 +393,13 @@ class RegexyTest(unittest.TestCase):
             match(r'(?:a)', 'a'), ())
         self.assertEqual(
             match(r'(?:aaa)', 'aaa'), ())
-        # (a(b))* -> ((ab, ab), (b, b))
-        # (?:a(b))* -> ((b, b), )
-        # (a(?:b))* -> ((ab, ab), )
-        # (a(b(c)))* -> ((abc, abc), (bc, bc), (c, c))
-        # (a(b)*)* -> ((abb, abb), ((b, b), (b, b)))
-        # (a(b(c)*)*)* -> ((abbcc, abbcc), ((b, bcc), (b, bcc)), ((None, (c, c)), (None, (c, c))))
         self.assertEqual(
-            match(r'(a(b))*', 'abab'), (('ab', 'ab'), 'bb'))  # fixme
+            match(r'(a(b))*', 'abab'), (('ab', 'ab'), ('b', 'b')))
         self.assertEqual(
-            match(r'(?:a(b))*', 'abab'), ('bb',))  # fixme ^
+            match(r'(?:a(b))*', 'abab'), (('b', 'b'),))
         self.assertEqual(
             match(r'(a(?:b))*', 'abab'), (('ab', 'ab'), ))
         # self.assertIsNotNone(match(r'(\))', ')'))  # fixme
-
-        # self.assertIsNone(match(r'((a)*n?(asd))*', 'aaanasdnasd'))  # fixme
-        # should be equal to r'((a)*n?(asd)*)*' (see last capture)
 
     def test_greediness(self):
         self.assertEqual(
@@ -388,3 +451,118 @@ class RegexyTest(unittest.TestCase):
         self.assertEqual(
             match(r'(a){1,}?(a){1,}?(a)?', 'aaa'),
             (('a',), ('a',), 'a'))
+
+    def test_assertions(self):
+        # todo: match is currently a full_match so this does not test much
+        self.assertEqual(
+            match(r'^a$', 'a'), ())
+        self.assertEqual(
+            match(r'^a$', 'ab'), None)
+        self.assertEqual(
+            match(r'^(a)$', 'a'), ('a',))
+        self.assertEqual(
+            match(r'^$', ''), ())
+
+        self.assertEqual(
+            match(r'\ba\b', 'a'), ())
+        self.assertEqual(
+            match(r'\ba\b', 'aa'), None)
+        self.assertEqual(
+            match(r'([\w ]*?)(\baa\b)([\w ]*?)', 'bbaa aa'), ('bbaa ', 'aa', None))
+        self.assertEqual(
+            match(r'([\w ]*)(\baa\b)([\w ]*)', 'aa bbaa'), (None, 'aa', ' bbaa'))
+        self.assertEqual(
+            match(r'^([\w ]*?)(\bis\b)([\w ]*?)$', 'This island is great'),
+            ('This island ', 'is', ' great'))
+
+        self.assertIsNone(match(r'\Ba\B', 'a'))
+        self.assertIsNone(
+            match(r'([\w ]*?)(\Baa\B)([\w ]*?)', 'bbaa aa'))
+        self.assertIsNone(
+            match(r'([\w ]*)(\Baa\B)([\w ]*)', 'aa bbaa'))
+        self.assertEqual(
+            match(r'^([\w ]*?)(\Baa\B)([\w ]*?)$', 'bbaabb'), ('bb', 'aa', 'bb'))
+        self.assertEqual(
+            match(r'^([\w ]*?)(\Bis\B)([\w ]*?)$', 'This is my sister'),
+            ('This is my s', 'is', 'ter'))
+
+        self.assertEqual(
+            match(r'\Aa\z', 'a'), ())
+        self.assertEqual(
+            match(r'\Aa\z', 'ab'), None)
+        self.assertEqual(
+            match(r'\A(a)\z', 'a'), ('a',))
+        self.assertEqual(
+            match(r'(\Aa\z)', 'a'), ('a',))
+
+    def test_dot_any_matcher(self):
+        self.assertEqual(
+            match(r'.', 'a'), ())
+        self.assertEqual(
+            match(r'.*', 'asd123!@#'), ())
+        self.assertEqual(
+            match(r'.*', '| (•□•) | (❍ᴥ❍ʋ)'), ())
+        self.assertEqual(
+            match(r'(.*)', 'ฅ^•ﻌ•^ฅ'), ('ฅ^•ﻌ•^ฅ',))
+        self.assertEqual(
+            match(r'.', '\t'), ())
+        self.assertEqual(
+            match(r'.', '\n'), None)
+
+    def test_lookahead_assertion(self):
+        self.assertIsNotNone(match(r'a(?=b)b', 'ab'))
+        self.assertIsNotNone(match(r'a(?=\w)b', 'ab'))
+        self.assertIsNotNone(match(r'a(?=b)bc', 'abc'))
+        self.assertIsNone(match(r'a(?=b)c', 'abc'))
+
+    def test_not_lookahead_assertion(self):
+        self.assertIsNone(match(r'a(?!b)b', 'ab'))
+        self.assertIsNone(match(r'a(?!\w)b', 'ab'))
+        self.assertIsNotNone(match(r'a(?!b)c', 'ac'))
+        self.assertIsNone(match(r'a(?!b).*', 'ab'))
+        self.assertIsNotNone(match(r'a(?!b).*', 'ac'))
+        self.assertEqual(match(r'a(?!b).*', 'ac'), ())
+        self.assertEqual(match(r'(a(?!b).*)', 'ac'), ('ac',))
+        self.assertEqual(match(r'(a)(?!b)(.*)', 'ac'), ('a', 'c'))
+
+    def test_group(self):
+        self.assertEqual(
+            new_match(r'(\w*)', 'foobar').group(0),
+            'foobar')
+        self.assertEqual(
+            new_match(r'(?P<foo>\w*)', 'foobar').group(0),
+            'foobar')
+        self.assertEqual(
+            new_match(r'(a)(b)', 'ab').group(0), 'a')
+        self.assertEqual(
+            new_match(r'(a)(b)', 'ab').group(1), 'b')
+        self.assertEqual(
+            new_match(r'(a)(b)', 'ab').groups(), ('a', 'b'))
+
+    def test_named_groups(self):
+        self.assertEqual(
+            new_match(r'(?P<foo>\w*)', 'foobar').group_name('foo'),
+            'foobar')
+        self.assertEqual(
+            new_match(r'(?P<foo>(?P<bar>\w*))', 'foobar').group_name('foo'),
+            'foobar')
+        self.assertEqual(
+            new_match(r'(?P<foo>(?P<bar>\w*))', 'foobar').group_name('bar'),
+            'foobar')
+        self.assertEqual(
+            new_match(r'(?P<foo>(?P<bar>\w*))', 'foobar').named_groups(),
+            {'foo': 'foobar',
+             'bar': 'foobar'})
+        self.assertEqual(
+            new_match(r'(?P<foo>(?P<bar>a)*b)', 'aab').group_name('foo'),
+            'aab')
+        self.assertEqual(
+            new_match(r'(?P<foo>(?P<bar>a)*b)', 'aab').group_name('bar'),
+            ('a', 'a'))
+        self.assertEqual(
+            new_match(r'(?P<foo>(?P<bar>a)*b)', 'aab').named_groups(),
+            {'foo': 'aab',
+             'bar': ('a', 'a')})
+        self.assertEqual(
+            new_match(r'((?P<bar>a)*b)', 'aab').group_name('bar'),
+            ('a', 'a'))
