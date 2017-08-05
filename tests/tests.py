@@ -566,3 +566,10 @@ class RegexyTest(unittest.TestCase):
         self.assertEqual(
             new_match(r'((?P<bar>a)*b)', 'aab').group_name('bar'),
             ('a', 'a'))
+
+    def test_flags(self):
+        self.assertIsNone(match(r'.*', 'foo\nbar'))
+        self.assertEqual(
+            match(r'(?s).*', 'foo\nbar'), ())
+        self.assertEqual(
+            match(r'(?s:.*)', 'foo\nbar'), ())

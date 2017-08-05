@@ -11,21 +11,14 @@ from typing import (
     Iterator,
     Tuple)
 
-from ..shared.nodes import (
-    Node,
-    EOF,
-    CharNode,
-    RepetitionRangeNode,
-    OpNode,
-    SkipNode,
-    AssertionNode)
+from ..shared import nodes
 from ..shared import Symbols
 
 
 __all__ = ['nfa']
 
 
-def _dup(state: Node, visited: set) -> Node:
+def _dup(state: nodes.Node, visited: set) -> nodes.Node:
     """
     Recursively shallow copy state and its connected states
 
@@ -36,15 +29,15 @@ def _dup(state: Node, visited: set) -> Node:
     :return: shallow copy of the root state
     :private:
     """
-    assert isinstance(state, Node)
+    assert isinstance(state, nodes.Node)
 
     if state in visited:
         return state
 
     visited.add(state)
 
-    if state is EOF:
-        return EOF
+    if state is nodes.EOF:
+        return nodes.EOF
 
     state_copy = copy.copy(state)
 
@@ -55,7 +48,7 @@ def _dup(state: Node, visited: set) -> Node:
     return state_copy
 
 
-def dup(state: Node) -> Node:
+def dup(state: nodes.Node) -> nodes.Node:
     return _dup(state=state, visited=set())
 
 
@@ -77,9 +70,9 @@ def rep_range_no_end(node, state):
     assert node.end is None
 
     new_state = dup(state)
-    zero_or_more = OpNode(
+    zero_or_more = nodes.OpNode(
         char=Symbols.ZERO_OR_MORE,
-        out=[new_state, EOF])
+        out=[new_state, nodes.EOF])
 
     if node.is_greedy:
         zero_or_more.out.reverse()
@@ -91,9 +84,9 @@ def rep_range_no_end(node, state):
 def rep_range_with_end(node, state):
     assert node.start < node.end
 
-    zero_or_one = OpNode(
+    zero_or_one = nodes.OpNode(
         char=Symbols.ZERO_OR_ONE,
-        out=[dup(state), EOF])
+        out=[dup(state), nodes.EOF])
 
     if zero_or_one.is_greedy:
         zero_or_one.out.reverse()
@@ -101,9 +94,9 @@ def rep_range_with_end(node, state):
     curr = zero_or_one
 
     for _ in range(node.start, node.end - 1):
-        zero_or_one_ = OpNode(
+        zero_or_one_ = nodes.OpNode(
             char=Symbols.ZERO_OR_ONE,
-            out=[dup(state), EOF])
+            out=[dup(state), nodes.EOF])
 
         if zero_or_one_.is_greedy:
             zero_or_one_.out.reverse()
@@ -114,7 +107,7 @@ def rep_range_with_end(node, state):
     return zero_or_one
 
 
-def _combine(origin_state: Node, target_state: Node, visited: set) -> None:
+def _combine(origin_state: nodes.Node, target_state: nodes.Node, visited: set) -> None:
     """
     Set all state ends to the target state
 
@@ -130,8 +123,8 @@ def _combine(origin_state: Node, target_state: Node, visited: set) -> None:
     and breaking the cycle
     :private:
     """
-    assert isinstance(origin_state, Node)
-    assert isinstance(target_state, Node)
+    assert isinstance(origin_state, nodes.Node)
+    assert isinstance(target_state, nodes.Node)
 
     if origin_state in visited:
         return
@@ -139,17 +132,17 @@ def _combine(origin_state: Node, target_state: Node, visited: set) -> None:
     visited.add(origin_state)
 
     for i, state in enumerate(origin_state.out):
-        if state is EOF:
+        if state is nodes.EOF:
             origin_state.out[i] = target_state
         else:
             _combine(state, target_state, visited)
 
 
-def combine(origin_state: Node, target_state: Node) -> None:
+def combine(origin_state: nodes.Node, target_state: nodes.Node) -> None:
     _combine(origin_state, target_state, visited=set())
 
 
-def nfa(nodes: Iterator[Node]) -> Node:
+def nfa(expression: Iterator[nodes.Node]) -> nodes.Node:
     """
     Converts a sequence of nodes into a NFA\
     ready to be matched against a string
@@ -170,14 +163,13 @@ def nfa(nodes: Iterator[Node]) -> Node:
     :private:
     """
     states = []
-    nodes = tuple(nodes)  # type: Tuple[Node]
 
-    if not nodes:
-        return SkipNode(out=[EOF])
-
-    for node in nodes:
-        if isinstance(node, (CharNode, AssertionNode)):
-            node.out = [EOF]
+    for node in expression:
+        if isinstance(node, (
+                nodes.CharNode,
+                nodes.AssertionNode,
+                nodes.SkipNode)):
+            node.out = [nodes.EOF]
             states.append(node)
             continue
 
@@ -197,7 +189,7 @@ def nfa(nodes: Iterator[Node]) -> Node:
 
         if node.char == Symbols.ZERO_OR_MORE:
             state = states.pop()
-            node.out = [state, EOF]
+            node.out = [state, nodes.EOF]
 
             if node.is_greedy:
                 node.out.reverse()
@@ -208,7 +200,7 @@ def nfa(nodes: Iterator[Node]) -> Node:
 
         if node.char == Symbols.ONE_OR_MORE:
             state = states.pop()
-            node.out = [state, EOF]
+            node.out = [state, nodes.EOF]
 
             if node.is_greedy:
                 node.out.reverse()
@@ -219,7 +211,7 @@ def nfa(nodes: Iterator[Node]) -> Node:
 
         if node.char == Symbols.ZERO_OR_ONE:
             state = states.pop()
-            node.out = [state, EOF]
+            node.out = [state, nodes.EOF]
 
             if node.is_greedy:
                 node.out.reverse()
@@ -228,6 +220,7 @@ def nfa(nodes: Iterator[Node]) -> Node:
             continue
 
         if node.char == Symbols.GROUP_START:
+            # Allow empty group (i.e: flags)
             state = states.pop()
             node.out = [state]
             states.append(node)
@@ -235,13 +228,13 @@ def nfa(nodes: Iterator[Node]) -> Node:
 
         if node.char == Symbols.GROUP_END:
             state = states.pop()
-            node.out = [EOF]
+            node.out = [nodes.EOF]
             combine(state, node)
             states.append(state)
             continue
 
         if node.char == Symbols.REPETITION_RANGE:
-            assert isinstance(node, RepetitionRangeNode)
+            assert isinstance(node, nodes.RepetitionRangeNode)
 
             state = states.pop()
             first = None
@@ -250,7 +243,7 @@ def nfa(nodes: Iterator[Node]) -> Node:
                 first = rep_range_fixed(node, state)
 
             if node.start == node.end:
-                states.append(first or SkipNode(out=[EOF]))
+                states.append(first or nodes.SkipNode(out=[nodes.EOF]))
                 continue
 
             if node.end is None:

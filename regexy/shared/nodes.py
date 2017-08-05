@@ -260,6 +260,9 @@ class AnyNode(CharNode):
             char=CharMatcher(char=char, compare=lambda c: c != '\n'),
             **kwargs)
 
+    def set_match_new_line(self):
+        self.char.compare = lambda c: True
+
 
 class SetMatcher:
 

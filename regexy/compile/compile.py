@@ -20,7 +20,8 @@ from .parse import (
     parse,
     greediness,
     join_atoms,
-    fill_groups)
+    fill_groups,
+    apply_flags)
 from .rpn import rpn
 from .nfa import nfa
 
@@ -71,6 +72,7 @@ def to_nfa(expression: str) -> NFA:
     """
     nodes = list(_to_nodes(expression))
     groups_count, named_groups = fill_groups(nodes)
+    apply_flags(nodes)
     return NFA(
         state=nfa(rpn(nodes)),
         groups_count=groups_count,

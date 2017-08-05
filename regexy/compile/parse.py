@@ -230,6 +230,15 @@ def parse_group_tag(
         # TODO: add negate "-"
         flags = [char]
 
+        # todo: Symbols.GROUP_FLAGS? nodes.GroupFlags?
+        if nxt == Symbols.GROUP_END:
+            yield nodes.GroupNode(
+                char=Symbols.GROUP_START,
+                is_capturing=False,
+                flags=flags)
+            yield nodes.SkipNode()
+            return
+
         for char, nxt in expression:
             if char == ':':
                 break
@@ -243,6 +252,10 @@ def parse_group_tag(
             char=Symbols.GROUP_START,
             is_capturing=False,
             flags=flags)
+
+        if nxt == Symbols.GROUP_END:
+            yield nodes.SkipNode()
+
         return
 
     assert False, 'unhandled group tag'
@@ -289,6 +302,10 @@ def parse(expression: str) -> Iterator[nodes.Node]:
     :return: iterator of nodes
     :private:
     """
+    if not expression:
+        yield nodes.SkipNode()
+        return
+
     expression = _peek(expression)
     is_escaped = False
 
@@ -370,7 +387,10 @@ def join_atoms(expression: Iterator[nodes.Node]) -> Iterator[nodes.Node]:
     atoms_count = 0
 
     for node in expression:
-        if isinstance(node, (nodes.CharNode, nodes.AssertionNode)):
+        if isinstance(node, (
+                nodes.CharNode,
+                nodes.AssertionNode,
+                nodes.SkipNode)):
             atoms_count += 1
 
             if atoms_count > 1:
@@ -479,21 +499,29 @@ def fill_groups(expression: List[nodes.Node]) -> Tuple[int, dict]:
         named_groups)
 
 
-def apply_flags(expression) -> None:
-    flags = []
+def apply_flags(expression: List[nodes.Node]) -> None:
+    expression = _peek(expression)
+    flags = []  # [['i', 'm'], ]
 
-    for node, next_node in _peek(expression):
+    for node, next_node in expression:
         if isinstance(node, nodes.CharNode):
-            for f in flags:
-                pass
+            for fs in flags:
+                for f in fs:
+                    if f == Flags.ANY_MATCH_NEW_LINE:
+                        if isinstance(node, nodes.AnyNode):
+                            node.set_match_new_line()
+
+                        continue
+
+                    assert False, "Unhandled %s" % f
 
             continue
 
         # (?flags)
         if (node.char == Symbols.GROUP_START and
                 node.flags and
-                isinstance(next_node, nodes.GroupNode) and
-                next_node.char == Symbols.GROUP_END):
+                isinstance(next_node, nodes.SkipNode)):
+            next(expression)  # Skip skip-node
             next(expression)  # Skip group end
 
             if flags:

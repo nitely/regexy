@@ -16,12 +16,7 @@ from typing import (
     Iterator,
     List)
 
-from ..shared.nodes import (
-    CharNode,
-    Node,
-    SymbolNode,
-    OpNode,
-    AssertionNode)
+from ..shared import nodes
 from ..shared import Symbols
 
 
@@ -89,14 +84,16 @@ def _has_precedence(a: str, b: str) -> bool:
          OPS[b].precedence < OPS[a].precedence))
 
 
-def _pop_greater_than(ops: List[SymbolNode], op: OpNode) -> Iterator[SymbolNode]:
+def _pop_greater_than(
+        ops: List[nodes.SymbolNode],
+        op: nodes.OpNode) -> Iterator[nodes.SymbolNode]:
     while (ops and
            ops[-1].char in OPS and
            _has_precedence(ops[-1].char, op.char)):
         yield ops.pop()
 
 
-def _pop_until_group_start(ops: List[SymbolNode]) -> Iterator[SymbolNode]:
+def _pop_until_group_start(ops: List[nodes.SymbolNode]) -> Iterator[nodes.SymbolNode]:
     while True:
         op = ops.pop()
         yield op
@@ -105,7 +102,7 @@ def _pop_until_group_start(ops: List[SymbolNode]) -> Iterator[SymbolNode]:
             break
 
 
-def rpn(nodes: Iterator[Node]) -> Iterator[Node]:
+def rpn(expression: Iterator[nodes.Node]) -> Iterator[nodes.Node]:
     """
     An adaptation of the Shunting-yard algorithm\
     for producing Reverse Polish Notation out of\
@@ -124,8 +121,11 @@ def rpn(nodes: Iterator[Node]) -> Iterator[Node]:
     """
     operators = []
 
-    for node in nodes:
-        if isinstance(node, (CharNode, AssertionNode)):
+    for node in expression:
+        if isinstance(node, (
+                nodes.CharNode,
+                nodes.AssertionNode,
+                nodes.SkipNode)):
             yield node
             continue
 
@@ -138,7 +138,7 @@ def rpn(nodes: Iterator[Node]) -> Iterator[Node]:
             yield node
             continue
 
-        if isinstance(node, OpNode):
+        if isinstance(node, nodes.OpNode):
             yield from _pop_greater_than(operators, node)
             operators.append(node)
             continue
