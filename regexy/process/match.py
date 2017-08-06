@@ -200,6 +200,9 @@ def match(nfa: NFA, text: Iterator[str]) -> Union[Match, None]:
         if not curr_states_set:
             break
 
+        if EOF in curr_states_set:
+            break
+
         for curr_state, captured in curr_states_set:
             if char != curr_state.char:
                 continue
@@ -213,6 +216,109 @@ def match(nfa: NFA, text: Iterator[str]) -> Union[Match, None]:
                 state=curr_state,
                 captured=captured,
                 chars=(char, next_char)))
+
+        curr_states_set, next_states_set = (
+            next_states_set, curr_states_set)
+        next_states_set.clear()
+
+    try:
+        captured = _get_match(curr_states_set)
+    except exceptions.MatchError:
+        return None
+
+    return Match(
+        captures=captures.matched(captured, nfa.groups_count),
+        named_groups=nfa.named_groups)
+
+
+def full_match(nfa: NFA, text: Iterator[str]) -> Union[Match, None]:
+    """
+
+    :param nfa: a NFA
+    :param text: a text to match against
+    :return: match or ``None``
+    """
+    text_it = _peek(text, sof='', eof='')
+
+    curr_states_set = StatesSet()
+    next_states_set = StatesSet()
+
+    curr_states_set.extend(curr_states(
+        state=nfa.state,
+        captured=None,
+        chars=next(text_it)))
+
+    for char, next_char in text_it:
+        if not curr_states_set:
+            break
+
+        for curr_state, captured in curr_states_set:
+            if char != curr_state.char:
+                continue
+
+            if curr_state.is_captured:
+                captured = captures.capture(
+                    char=char,
+                    prev=captured)
+
+            next_states_set.extend(next_states(
+                state=curr_state,
+                captured=captured,
+                chars=(char, next_char)))
+
+        curr_states_set, next_states_set = (
+            next_states_set, curr_states_set)
+        next_states_set.clear()
+
+    try:
+        captured = _get_match(curr_states_set)
+    except exceptions.MatchError:
+        return None
+
+    return Match(
+        captures=captures.matched(captured, nfa.groups_count),
+        named_groups=nfa.named_groups)
+
+
+def search(nfa: NFA, text: Iterator[str]) -> Union[MatchedType, None]:
+    """
+
+    :param nfa: a NFA
+    :param text: a text to match against
+    :return: match or ``None``
+    """
+    text_it = _peek(text, sof='', eof='')
+
+    curr_states_set = StatesSet()
+    next_states_set = StatesSet()
+
+    curr_states_set.extend(curr_states(
+        state=nfa.state,
+        captured=None,
+        chars=next(text_it)))
+
+    for char, next_char in text_it:
+        if EOF in curr_states_set:
+            break
+
+        for curr_state, captured in curr_states_set:
+            if char != curr_state.char:
+                continue
+
+            if curr_state.is_captured:
+                captured = captures.capture(
+                    char=char,
+                    prev=captured)
+
+            next_states_set.extend(next_states(
+                state=curr_state,
+                captured=captured,
+                chars=(char, next_char)))
+
+        curr_states_set.extend(curr_states(
+            state=nfa.state,
+            captured=None,
+            chars=(char, next_char)))
 
         curr_states_set, next_states_set = (
             next_states_set, curr_states_set)
