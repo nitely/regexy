@@ -50,7 +50,7 @@ class RegexyTest(unittest.TestCase):
         self.assertIsNotNone(new_full_match('a', 'a'))
         self.assertIsNone(new_full_match('b', 'a'))
 
-    def test_match(self):
+    def test_full_match(self):
         self.assertIsNotNone(full_match('', ''))
         self.assertIsNotNone(full_match('a', 'a'))
         self.assertIsNotNone(full_match('(a)b', 'ab'))
@@ -64,6 +64,35 @@ class RegexyTest(unittest.TestCase):
         self.assertIsNone(full_match('a(b|c)*d', 'ab'))
         self.assertIsNone(full_match('b', 'a'))
         self.assertIsNone(full_match('', 'a'))
+
+    def test_match(self):
+        self.assertIsNotNone(match('', ''))
+        self.assertIsNotNone(match('a', 'a'))
+        self.assertIsNotNone(match('ab', 'ab'))
+        self.assertIsNotNone(match('a*', 'aa'))
+        self.assertIsNotNone(match('^', 'a'))
+        self.assertIsNotNone(match('', 'a'))
+        self.assertIsNotNone(match('a', 'ab'))
+        self.assertIsNotNone(match('abc', 'abcde'))
+        self.assertIsNone(match('b', 'a'))
+        self.assertIsNone(match('a', 'ba'))
+        self.assertIsNone(match('^$', 'a'))
+
+    def test_search(self):
+        self.assertIsNotNone(search('', ''))
+        self.assertIsNotNone(search('a', 'a'))
+        self.assertIsNotNone(search('ab', 'ab'))
+        self.assertIsNotNone(search('a*', 'aa'))
+        self.assertIsNotNone(search('^', 'a'))
+        self.assertIsNotNone(search('', 'a'))
+        self.assertIsNotNone(search('a', 'ab'))
+        self.assertIsNotNone(search('b', 'ab'))
+        self.assertIsNotNone(search('b', 'abc'))
+        self.assertIsNotNone(search('abc', 'abcde'))
+        self.assertIsNotNone(search('cde', 'abcde'))
+        self.assertIsNotNone(search('c', 'abcde'))
+        self.assertIsNone(search('b', 'a'))
+        self.assertIsNone(search('^$', 'a'))
 
     def test_repetition_cycle(self):
         self.assertIsNotNone(full_match('a**', 'aaa'))
