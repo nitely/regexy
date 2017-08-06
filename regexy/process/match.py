@@ -315,7 +315,7 @@ def search(nfa: NFA, text: Iterator[str]) -> Union[MatchedType, None]:
                 captured=captured,
                 chars=(char, next_char)))
 
-        curr_states_set.extend(curr_states(
+        next_states_set.extend(curr_states(
             state=nfa.state,
             captured=None,
             chars=(char, next_char)))
