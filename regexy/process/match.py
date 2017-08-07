@@ -200,10 +200,15 @@ def match(nfa: NFA, text: Iterator[str]) -> Union[Match, None]:
         if not curr_states_set:
             break
 
-        if EOF in curr_states_set:
+        if curr_states_set[0] is EOF:
             break
 
         for curr_state, captured in curr_states_set:
+            if curr_state is EOF:
+                next_states_set.extend(
+                    ((curr_state, captured),))
+                continue
+
             if char != curr_state.char:
                 continue
 

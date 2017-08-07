@@ -78,6 +78,13 @@ class RegexyTest(unittest.TestCase):
         self.assertIsNone(match('a', 'ba'))
         self.assertIsNone(match('^$', 'a'))
 
+        self.assertEqual(
+            match('(\w+)', '123abc123').groups(), ('123abc123',))
+        self.assertEqual(
+            match('(.*)', '123abc123').groups(), ('123abc123',))
+        self.assertEqual(
+            match('(.*?)', '123abc123').groups(), (None,))
+
     def test_search(self):
         self.assertIsNotNone(search('', ''))
         self.assertIsNotNone(search('a', 'a'))
@@ -93,6 +100,12 @@ class RegexyTest(unittest.TestCase):
         self.assertIsNotNone(search('c', 'abcde'))
         self.assertIsNone(search('b', 'a'))
         self.assertIsNone(search('^$', 'a'))
+
+        self.assertEqual(
+            search('(abc)', '123abc123').groups(), ('abc',))
+        #self.assertEqual(
+        #    search('^(.*)', '123abc123').groups(),
+        #    match('(.*)', '123abc123').groups())  # fixme: should work as '(\w*).*$'
 
     def test_repetition_cycle(self):
         self.assertIsNotNone(full_match('a**', 'aaa'))

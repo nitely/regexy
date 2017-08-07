@@ -24,6 +24,9 @@ class StatesSet:
     def __contains__(self, item):
         return item in self._set
 
+    def __getitem__(self, item):
+        return self._list[item]
+
     def extend(self, items):
         items = tuple(
             item
