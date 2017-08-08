@@ -10,7 +10,11 @@ A Python library for parsing, compiling, and executing regular expressions.
 All searches execute in linear time with respect to the size of the regular
 expression and search text.
 
-Mostly based on Thompson's NFA.
+```
+Initial work inspired by Thompson's NFA paper.
+APIs inspired by RE2 and Python's re module.
+Implementation is my own and it's not influenced by any existing solution.
+```
 
 > Be aware!
 > This is nothing more than an experiment for researching purposes.
