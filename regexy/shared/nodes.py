@@ -110,17 +110,34 @@ class AssertionNode(SymbolNode):
 
 class StartNode(AssertionNode):
 
+    def __init__(self, *, char: str, **kwargs) -> None:
+        if char == 'A':
+            char = '\\%s' % char
+
+        super().__init__(char=char, **kwargs)
+
     def match(self, char, next_char):
         return not char
 
 
 class EndNode(AssertionNode):
 
+    def __init__(self, *, char: str, **kwargs) -> None:
+        if char == 'z':
+            char = '\\%s' % char
+
+        super().__init__(char=char, **kwargs)
+
     def match(self, char, next_char):
         return not next_char
 
 
 class WordBoundaryNode(AssertionNode):
+
+    def __init__(self, *, char: str, **kwargs) -> None:
+        super().__init__(
+            char='\\%s' % char,
+            **kwargs)
 
     def match(self, char, next_char):
         is_char_w = char.isalnum()
@@ -133,6 +150,11 @@ class WordBoundaryNode(AssertionNode):
 
 
 class NotWordBoundaryNode(AssertionNode):
+
+    def __init__(self, *, char: str, **kwargs) -> None:
+        super().__init__(
+            char='\\%s' % char,
+            **kwargs)
 
     def match(self, char, next_char):
         is_char_w = char.isalnum()
