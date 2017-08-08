@@ -33,11 +33,10 @@ Mostly based on Thompson's NFA.
 - [x] Lookahead assertion `(?=...)` and `(?!...)` (limited to a single char)
 - [x] Assertions `\A`, `\z`, `\B`
 - [x] Named capturing groups
+- [x] `search`
+- [x] `full_match`
 - [ ] Flags
-- [ ] Search
-- [ ] Full_match
 - [ ] User friendly compiling errors
-- [ ] Sets `\b` support (python does not supported so proly not)
 - [ ] ... ?
 
 ## Compatibility
