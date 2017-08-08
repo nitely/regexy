@@ -174,13 +174,11 @@ def match(nfa: NFA, text: Iterator[str]) -> Union[Match, None]:
     and matching it to the current states\
     (one or multiple states)
 
-    The algorithm is an extended version of Thompson's NFA
-
     Return the matched groups or\
     an empty sequence if the regex has no groups or\
     ``None`` if no match is found
 
-    The iterator may not be fully consumed.
+    The iterator may not be fully consumed
 
     :param nfa: a NFA
     :param text: a text to match against
@@ -303,10 +301,16 @@ def search(nfa: NFA, text: Iterator[str]) -> Union[MatchedType, None]:
         chars=next(text_it)))
 
     for char, next_char in text_it:
-        if EOF in curr_states_set:
+        if (curr_states_set and
+                curr_states_set[0] is EOF):
             break
 
         for curr_state, captured in curr_states_set:
+            if curr_state is EOF:
+                next_states_set.extend(
+                    ((curr_state, captured),))
+                continue
+
             if char != curr_state.char:
                 continue
 
