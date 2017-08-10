@@ -573,3 +573,17 @@ class RegexyTest(unittest.TestCase):
             match(r'(?s).*', 'foo\nbar'), ())
         self.assertEqual(
             match(r'(?s:.*)', 'foo\nbar'), ())
+        self.assertEqual(
+            match(r'(?ssss).*', 'foo\nbar'), ())
+        self.assertIsNone(
+            match(r'(?s-s).*', 'foo\nbar'))
+        self.assertIsNone(
+            match(r'(?-s-s-s).*', 'foo\nbar'))
+        self.assertEqual(
+            match(r'(?-ss).*', 'foo\nbar'), ())
+        self.assertEqual(
+            match(r'(?-ss-ss).*', 'foo\nbar'), ())
+        self.assertIsNone(
+            match(r'(?-sssss-s).*', 'foo\nbar'))
+        self.assertIsNone(
+            match(r'(?s-s:.*)', 'foo\nbar'))

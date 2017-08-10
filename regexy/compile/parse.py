@@ -223,13 +223,14 @@ def parse_group_tag(
         yield lookahead(node=nodes.CharNode(char=char))
         return
 
-    if (char in (
+    if (char in {
             Flags.CASE_INSENSITIVE,
             Flags.MULTI_LINE,
             Flags.ANY_MATCH_NEW_LINE,
-            Flags.UN_GREEDY) or
+            Flags.UN_GREEDY} or
             char == '-'):
         flags = []
+        is_negate = False
 
         for char, nxt in itertools.chain(
                 *(((char, nxt),), expression)):
@@ -237,11 +238,13 @@ def parse_group_tag(
                 break
 
             if char == '-':
-                # assert nxt in FLAGS
-                flags.append('%s%s' % (char, nxt))
-                next(expression)
+                is_negate = True
+                continue
+
+            if is_negate:
+                is_negate = False
+                flags.append('-%s' % char)
             else:
-                # assert char in FLAGS
                 flags.append(char)
 
             if nxt == Symbols.GROUP_END:
@@ -334,11 +337,11 @@ def greediness(expression: Iterator[nodes.Node]) -> Iterator[nodes.Node]:
         # todo: make RepetitionNode?
         is_repetition = (
             isinstance(node, nodes.OpNode) and
-            node.char in (
+            node.char in {
                 Symbols.ZERO_OR_ONE,
                 Symbols.ZERO_OR_MORE,
                 Symbols.ONE_OR_MORE,
-                Symbols.REPETITION_RANGE))
+                Symbols.REPETITION_RANGE})
         is_next_zero_or_one = (
             isinstance(next_node, nodes.OpNode) and
             next_node.char == Symbols.ZERO_OR_ONE)
@@ -427,13 +430,7 @@ def join_atoms(expression: Iterator[nodes.Node]) -> Iterator[nodes.Node]:
 
 def fill_groups(expression: List[nodes.Node]) -> Tuple[int, dict]:
     """
-    Fill groups with missing data.\
-    This is index of group, whether\
-    is a repeat group or not and capturing\
-    flag for chars within the group
-
-    This is required for later capturing of\
-    characters when searching/matching a text
+    Fill groups with index, repetition and capturing
 
     :param nodes: a list of nodes
     :return: number of groups
@@ -470,10 +467,10 @@ def fill_groups(expression: List[nodes.Node]) -> Tuple[int, dict]:
         if node.char == Symbols.GROUP_END:
             start = groups.pop()
 
-            start.is_repeated = next_node.char in (
+            start.is_repeated = next_node.char in {
                 Symbols.ZERO_OR_MORE,
                 Symbols.ONE_OR_MORE,
-                Symbols.REPETITION_RANGE)
+                Symbols.REPETITION_RANGE}
             node.is_repeated = start.is_repeated
             node.index = start.index
 
@@ -517,7 +514,7 @@ def _normalize_flags(flags: List[List[str]]) -> Iterator[str]:
 
 def apply_flags(expression: List[nodes.Node]) -> None:
     expression = _peek(expression)
-    flags = []  # [['i', 'm'], ]
+    flags = []  # [['i', 'm'], [], ]
 
     for node, next_node in expression:
         if isinstance(node, nodes.CharNode):
@@ -533,6 +530,7 @@ def apply_flags(expression: List[nodes.Node]) -> None:
             continue
 
         # (?flags)
+        # Orphan flags are added to current group
         if (node.char == Symbols.GROUP_START and
                 node.flags and
                 isinstance(next_node, nodes.SkipNode)):
