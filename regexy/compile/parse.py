@@ -292,6 +292,27 @@ def _peek(iterator, eof=None):
     yield prev, eof
 
 
+ESCAPED_SEQ = {
+    'a': '\a',
+    'f': '\f',
+    't': '\t',
+    'n': '\n',
+    'r': '\r',
+    'v': '\v'}
+
+
+def _literal(char):
+    """
+    Return the literal of char.\
+    If char is part of a escaped\
+    sequence then return the sequence
+
+    :param char: a single letter
+    :return: literal of char
+    """
+    return ESCAPED_SEQ.get(char, char)
+
+
 def parse(expression: str) -> Iterator[nodes.Node]:
     """
     Parse a regular expression into a sequence nodes.\
@@ -314,7 +335,7 @@ def parse(expression: str) -> Iterator[nodes.Node]:
     for char, next_char in expression:
         if is_escaped:
             is_escaped = False
-            yield ESCAPED_CHARS.get(char, nodes.CharNode)(char=char)
+            yield ESCAPED_CHARS.get(char, nodes.CharNode)(char=_literal(char))
             continue
 
         if char == '\\':

@@ -100,7 +100,7 @@ class RegexyTest(unittest.TestCase):
         self.assertEqual(to_atoms('a*b'), 'a*~b')
         self.assertEqual(to_atoms('(a)b'), '(a)~b')
         self.assertEqual(to_atoms('(a)(b)'), '(a)~(b)')
-        self.assertEqual(to_atoms(r'\a'), 'a')
+        self.assertEqual(to_atoms(r'\c'), 'c')
         self.assertEqual(to_atoms(r'a\*b'), 'a~*~b')
         self.assertEqual(to_atoms(r'\(a\)'), '(~a~)')
         self.assertEqual(to_atoms(r'\w'), '\w')
@@ -131,7 +131,7 @@ class RegexyTest(unittest.TestCase):
         self.assertEqual(match(r'\(a\)', '(a)'), ())
         self.assertIsNotNone(match(r'a\*b', 'a*b'))
         self.assertIsNotNone(match(r'a\*b*', 'a*bbb'))
-        self.assertIsNotNone(match(r'\a', 'a'))
+        self.assertIsNotNone(match(r'\c', 'c'))
         self.assertIsNotNone(match(r'\\', '\\'))
         self.assertIsNotNone(match(r'\\\\', '\\\\'))
 
@@ -587,3 +587,8 @@ class RegexyTest(unittest.TestCase):
             match(r'(?-sssss-s).*', 'foo\nbar'))
         self.assertIsNone(
             match(r'(?s-s:.*)', 'foo\nbar'))
+
+        self.assertEqual(
+            match(r'(.*)\n.*', 'foo\nbar'), ('foo',))
+        self.assertEqual(
+            match(r'((?s:.*))', 'foo\nbar'), ('foo\nbar',))
