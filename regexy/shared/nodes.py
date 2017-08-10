@@ -58,6 +58,15 @@ class CharNode(Node):
         super().__init__(**kwargs)
         self.is_captured = is_captured
 
+    def set_case_insensitive(self):
+        assert isinstance(self.char, str)
+
+        a = self.char.lower()
+        b = self.char.upper()
+        self.char = CharMatcher(
+            char=self.char,
+            compare=lambda c: c in (a, b))
+
 
 class SymbolNode(Node):
     """
@@ -183,7 +192,7 @@ class ShorthandNode(CharNode):
 class CharMatcher:
 
     def __init__(self, *, char: str, compare: Callable[[str], bool]) -> None:
-        self.char = '\\%s' % char
+        self.char = char
         self.compare = compare
 
     def __eq__(self, other: str) -> bool:
@@ -197,7 +206,9 @@ class AlphaNumNode(ShorthandNode):
 
     def __init__(self, *, char: str, **kwargs) -> None:
         super().__init__(
-            char=CharMatcher(char=char, compare=lambda c: c.isalnum()),
+            char=CharMatcher(
+                char='\\%s' % char,
+                compare=lambda c: c.isalnum()),
             **kwargs)
 
 
@@ -205,7 +216,9 @@ class DigitNode(ShorthandNode):
 
     def __init__(self, *, char: str, **kwargs) -> None:
         super().__init__(
-            char=CharMatcher(char=char, compare=lambda c: c.isdigit()),
+            char=CharMatcher(
+                char='\\%s' % char,
+                compare=lambda c: c.isdigit()),
             **kwargs)
 
 
@@ -218,7 +231,7 @@ class WhiteSpaceNode(ShorthandNode):
     def __init__(self, *, char: str, **kwargs) -> None:
         super().__init__(
             char=CharMatcher(
-                char=char,
+                char='\\%s' % char,
                 compare=lambda c: (
                     c in WHITE_SPACES or
                     unicodedata.category(c)[0] == 'Z')),
@@ -230,7 +243,7 @@ class NotWhiteSpaceNode(ShorthandNode):
     def __init__(self, *, char: str, **kwargs) -> None:
         super().__init__(
             char=CharMatcher(
-                char=char,
+                char='\\%s' % char,
                 compare=lambda c: (
                     c not in WHITE_SPACES and
                     unicodedata.category(c)[0] != 'Z')),
@@ -241,7 +254,9 @@ class NotAlphaNumNode(ShorthandNode):
 
     def __init__(self, *, char: str, **kwargs) -> None:
         super().__init__(
-            char=CharMatcher(char=char, compare=lambda c: not c.isalnum()),
+            char=CharMatcher(
+                char='\\%s' % char,
+                compare=lambda c: not c.isalnum()),
             **kwargs)
 
 
@@ -249,7 +264,9 @@ class NotDigitNode(ShorthandNode):
 
     def __init__(self, *, char: str, **kwargs) -> None:
         super().__init__(
-            char=CharMatcher(char=char, compare=lambda c: not c.isdigit()),
+            char=CharMatcher(
+                char='\\%s' % char,
+                compare=lambda c: not c.isdigit()),
             **kwargs)
 
 
@@ -257,7 +274,9 @@ class AnyNode(CharNode):
 
     def __init__(self, *, char: str, **kwargs) -> None:
         super().__init__(
-            char=CharMatcher(char=char, compare=lambda c: c != '\n'),
+            char=CharMatcher(
+                char='\\%s' % char,
+                compare=lambda c: c != '\n'),
             **kwargs)
 
     def set_match_new_line(self):

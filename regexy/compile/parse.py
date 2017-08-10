@@ -546,6 +546,12 @@ def apply_flags(expression: List[nodes.Node]) -> None:
 
                     continue
 
+                if flag == Flags.CASE_INSENSITIVE:
+                    if isinstance(node, nodes.CharNode):
+                        node.set_case_insensitive()
+
+                    continue
+
                 assert False, "Unhandled %s" % flag
 
             continue

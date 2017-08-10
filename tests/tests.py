@@ -592,3 +592,24 @@ class RegexyTest(unittest.TestCase):
             match(r'(.*)\n.*', 'foo\nbar'), ('foo',))
         self.assertEqual(
             match(r'((?s:.*))', 'foo\nbar'), ('foo\nbar',))
+
+        self.assertEqual(
+            match(r'((?i:a))', 'a'), ('a',))
+        self.assertEqual(
+            match(r'((?i:a))', 'A'), ('A',))
+        self.assertEqual(
+            match(r'((?i:aBc))', 'ABC'), ('ABC',))
+        self.assertEqual(
+            match(r'((?-i:a))', 'a'), ('a',))
+        self.assertIsNone(
+            match(r'((?-i:a))', 'A'))
+        self.assertIsNone(
+            match(r'((?-ii-i:a))', 'A'))
+        self.assertEqual(
+            match(r'((?i)a)', 'a'), ('a',))
+        self.assertEqual(
+            match(r'((?i)a)', 'A'), ('A',))
+        self.assertEqual(
+            match(r'((?-i)a)', 'a'), ('a',))
+        self.assertIsNone(
+            match(r'((?-i)a)', 'A'))
