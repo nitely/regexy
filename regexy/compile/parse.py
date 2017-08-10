@@ -10,6 +10,7 @@ from typing import (
     Iterator,
     List,
     Tuple)
+import itertools
 
 from ..shared import nodes
 from ..shared import Symbols
@@ -222,28 +223,26 @@ def parse_group_tag(
         yield lookahead(node=nodes.CharNode(char=char))
         return
 
-    if char in (
+    if (char in (
             Flags.CASE_INSENSITIVE,
             Flags.MULTI_LINE,
             Flags.ANY_MATCH_NEW_LINE,
-            Flags.UN_GREEDY):
-        # TODO: add negate "-"
-        flags = [char]
+            Flags.UN_GREEDY) or
+            char == '-'):
+        flags = []
 
-        # todo: Symbols.GROUP_FLAGS? nodes.GroupFlags?
-        if nxt == Symbols.GROUP_END:
-            yield nodes.GroupNode(
-                char=Symbols.GROUP_START,
-                is_capturing=False,
-                flags=flags)
-            yield nodes.SkipNode()
-            return
-
-        for char, nxt in expression:
+        for char, nxt in itertools.chain(
+                *(((char, nxt),), expression)):
             if char == ':':
                 break
 
-            flags.append(char)
+            if char == '-':
+                # assert nxt in FLAGS
+                flags.append('%s%s' % (char, nxt))
+                next(expression)
+            else:
+                # assert char in FLAGS
+                flags.append(char)
 
             if nxt == Symbols.GROUP_END:
                 break
@@ -253,7 +252,7 @@ def parse_group_tag(
             is_capturing=False,
             flags=flags)
 
-        if nxt == Symbols.GROUP_END:
+        if char != ':' or nxt == Symbols.GROUP_END:
             yield nodes.SkipNode()
 
         return
@@ -499,21 +498,37 @@ def fill_groups(expression: List[nodes.Node]) -> Tuple[int, dict]:
         named_groups)
 
 
+def _normalize_flags(flags: List[List[str]]) -> Iterator[str]:
+    u_flags = set()
+
+    for flag in itertools.chain(*flags):
+        if len(flag) == 1:
+            u_flags.add(flag)
+            continue
+
+        # -flag
+        try:
+            u_flags.remove(flag[1])
+        except KeyError:
+            pass
+
+    return u_flags
+
+
 def apply_flags(expression: List[nodes.Node]) -> None:
     expression = _peek(expression)
     flags = []  # [['i', 'm'], ]
 
     for node, next_node in expression:
         if isinstance(node, nodes.CharNode):
-            for fs in flags:
-                for f in fs:
-                    if f == Flags.ANY_MATCH_NEW_LINE:
-                        if isinstance(node, nodes.AnyNode):
-                            node.set_match_new_line()
+            for flag in _normalize_flags(flags):
+                if flag == Flags.ANY_MATCH_NEW_LINE:
+                    if isinstance(node, nodes.AnyNode):
+                        node.set_match_new_line()
 
-                        continue
+                    continue
 
-                    assert False, "Unhandled %s" % f
+                assert False, "Unhandled %s" % flag
 
             continue
 
