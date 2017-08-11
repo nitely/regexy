@@ -538,22 +538,29 @@ def apply_flags(expression: List[nodes.Node]) -> None:
     flags = []  # [['i', 'm'], [], ]
 
     for node, next_node in expression:
+        # todo: move to _apply_flags(node, flags)
+        for flag in _normalize_flags(flags):
+            if flag == Flags.ANY_MATCH_NEW_LINE:
+                if isinstance(node, nodes.AnyNode):
+                    node.set_match_new_line()
+
+                continue
+
+            if flag == Flags.CASE_INSENSITIVE:
+                if isinstance(node, nodes.CharNode):
+                    node.set_case_insensitive()
+
+                continue
+
+            if flag == Flags.UN_GREEDY:
+                if isinstance(node, nodes.OpNode):
+                    node.is_greedy = not node.is_greedy
+
+                continue
+
+            assert False, "Unhandled %s" % flag
+
         if isinstance(node, nodes.CharNode):
-            for flag in _normalize_flags(flags):
-                if flag == Flags.ANY_MATCH_NEW_LINE:
-                    if isinstance(node, nodes.AnyNode):
-                        node.set_match_new_line()
-
-                    continue
-
-                if flag == Flags.CASE_INSENSITIVE:
-                    if isinstance(node, nodes.CharNode):
-                        node.set_case_insensitive()
-
-                    continue
-
-                assert False, "Unhandled %s" % flag
-
             continue
 
         # (?flags)

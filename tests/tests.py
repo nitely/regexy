@@ -613,3 +613,16 @@ class RegexyTest(unittest.TestCase):
             match(r'((?-i)a)', 'a'), ('a',))
         self.assertIsNone(
             match(r'((?-i)a)', 'A'))
+
+        self.assertEqual(
+            match(r'((?U)a*)(a*)', 'aa'), (None, 'aa'))
+        self.assertEqual(
+            match(r'((?U)a*?)(a*)', 'aa'), ('aa', None))
+        self.assertEqual(
+            match(r'((?U-U)a*)(a*)', 'aa'), ('aa', None))
+        self.assertEqual(
+            match(r'((?U:a*))(a*)', 'aa'), (None, 'aa'))
+        self.assertEqual(
+            match(r'((?U:a*?))(a*)', 'aa'), ('aa', None))
+        self.assertEqual(
+            match(r'((?U-U:a*))(a*)', 'aa'), ('aa', None))
