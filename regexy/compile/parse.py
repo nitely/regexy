@@ -516,7 +516,7 @@ def fill_groups(expression: List[nodes.Node]) -> Tuple[int, dict]:
         named_groups)
 
 
-def _normalize_flags(flags: List[List[str]]) -> Iterator[str]:
+def _squash_flags(flags: List[List[str]]) -> Iterator[str]:
     u_flags = set()
 
     for flag in itertools.chain(*flags):
@@ -539,7 +539,7 @@ def apply_flags(expression: List[nodes.Node]) -> None:
 
     for node, next_node in expression:
         # todo: move to _apply_flags(node, flags)
-        for flag in _normalize_flags(flags):
+        for flag in _squash_flags(flags):
             if flag == Flags.ANY_MATCH_NEW_LINE:
                 if isinstance(node, nodes.AnyNode):
                     node.set_match_new_line()
