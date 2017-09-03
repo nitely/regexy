@@ -165,6 +165,10 @@ def nfa(expression: Iterator[nodes.Node]) -> nodes.Node:
     states = []
 
     for node in expression:
+        if (isinstance(node, nodes.GroupNode) and
+                not node.is_capturing):
+            continue
+
         if isinstance(node, (
                 nodes.CharNode,
                 nodes.AssertionNode,
