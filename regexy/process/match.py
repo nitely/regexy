@@ -226,3 +226,99 @@ def match(nfa: NFA, text: Iterator[str]) -> Union[Match, None]:
     return Match(
         captures=captures.matched(captured, nfa.groups_count),
         named_groups=nfa.named_groups)
+
+
+def _dfa_states(state, visited):
+    if state in visited:
+        # yield state
+        return
+
+    visited.add(state)
+
+    if state is EOF:
+        yield EOF
+        return
+
+    if isinstance(state, CharNode):
+        yield state
+        return
+
+    for s in state.out:
+        yield from _dfa_states(s, visited)
+
+
+def _nxt_dfa_states(state, *args, **kw):
+    for s in state.out:
+        yield from _dfa_states(s, set())
+
+
+class DFA:
+
+    def __init__(self, states=None):
+        self.states = states or []
+        self.next = {}
+
+    def __str__(self):
+        return str([s.char for s in self.states])
+
+
+def dfa(nfa):
+    states = list(_dfa_states(nfa.state, visited=set()))
+    first = DFA(states)
+    dfa_list = [first]
+    visited = []  # ordered
+
+    table = []
+
+    while dfa_list:
+        dfa_ = dfa_list.pop()
+        if dfa_ in visited:
+            continue
+        visited.append(dfa_)
+
+        for s in dfa_.states:
+            if s is EOF:
+                dfa_.next[s.char] = EOF
+                continue
+
+            sts = list(_nxt_dfa_states(s, visited=set()))
+            assert sts
+
+            if s.char in dfa_.next:
+                dfa_list.remove(dfa_.next[s.char])
+                sts = dfa_.next[s.char].states[:] + [
+                    s2 for s2 in sts
+                    if s2 not in dfa_.next[s.char].states]
+                assert len(set(sts)) == len(sts)
+
+            for d in visited:
+                if d.states == sts:
+                    dfa_n = d
+                    break
+            else:  # no-break
+                dfa_n = DFA(sts)
+
+            dfa_.next[s.char] = dfa_n
+            dfa_list.append(dfa_n)
+
+        table.append(dfa_)
+
+    new_table = []
+    for d in table:
+        row = []
+        for st in d.states:
+            row.append((st.char, st is EOF or table.index(d.next[st.char])))
+        new_table.append(row)
+    print('table')
+    for row in new_table:
+        print(row)
+    labels = list(sorted(set(l for row in new_table for l, i in row)))
+    print(labels)
+    new_table2 = []
+    for row in new_table:
+        row = dict(row)
+        row2 = []
+        for l in labels:
+            row2.append(row.get(l, None))
+        new_table2.append(row2)
+    print(new_table2)

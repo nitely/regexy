@@ -51,6 +51,8 @@ class RegexyTest(unittest.TestCase):
         self.assertIsNotNone(match('((a(b)*)*(b)*)', 'abbb'))
         self.assertIsNotNone(match('a|b', 'a'))
         self.assertIsNotNone(match('a|b', 'b'))
+        self.assertIsNotNone(match('((a|b)c|b)', 'bc'))
+        self.assertIsNotNone(match('((a|b)c|b)', 'b'))
         self.assertIsNone(match('a(b|c)*d', 'ab'))
         self.assertIsNone(match('b', 'a'))
         self.assertIsNone(match('', 'a'))
@@ -626,3 +628,18 @@ class RegexyTest(unittest.TestCase):
             match(r'((?U:a*?))(a*)', 'aa'), ('aa', None))
         self.assertEqual(
             match(r'((?U-U:a*))(a*)', 'aa'), ('aa', None))
+
+    def test_dfa(self):
+
+        from regexy.process.match import dfa
+
+        pattern = '(?:lm|(?:g|l|m)|(?:i*(?:(?:o*p+q*|o*np*q*|o*kq*|o+|q+)|(?:(?:c|b)h*d|j(?:e|bh*d?))|aa?|(?:o|p|q|n|k|c|d|e|b|r))?)?(?:f|h|j)*)'
+        #dfa(regexy.compile(pattern))
+
+        #dfa(regexy.compile('(bc|b)'))
+        #dfa(regexy.compile('a(f|g)b(f|g)'))
+        #dfa(regexy.compile('(?:h|h)*'))
+        #dfa(regexy.compile('(?:hi|h)*'))
+        #dfa(regexy.compile('(?:ab|c*(?:d|e)(?:f|g)*)'))
+        #dfa(regexy.compile('a*'))
+        #dfa(regexy.compile('(?:rf*|r)'))
