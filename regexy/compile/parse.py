@@ -108,6 +108,8 @@ def parse_set(expression: Iterator[Tuple[str, str]], **kwargs) -> Iterator[nodes
                 shorthands.append(
                     SHORTHANDS[char](char=char).char)
             else:
+                # TODO: this means I cant add new shorthands, raise an exception!
+                # TODO: make things stricter in general!
                 chars.append(char)
 
             continue
