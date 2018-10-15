@@ -633,8 +633,10 @@ class RegexyTest(unittest.TestCase):
 
         from regexy.process.match import dfa
 
-        pattern = '(?:lm|(?:g|l|m)|(?:i*(?:(?:o*p+q*|o*np*q*|o*kq*|o+|q+)|(?:(?:c|b)h*d|j(?:e|bh*d?))|aa?|(?:o|p|q|n|k|c|d|e|b|r))?)?(?:f|h|j)*)'
+        #pattern = '(?:kj|(?:e|j|k)|(?:d|f|h)*(?:(?:(?:o*n+m*|o*n*lm*|o*im*|m+|o+)|(?:(?:chf*)+c)|bb?|(?:m|n|o|l|i|c|p))?g*)?)'
+        #pattern = '(0|1)*1(0|1)(0|1)(0|1)(0|1)(0|1)(0|1)(0|1)(0|1)'
         #dfa(regexy.compile(pattern))
+
 
         #dfa(regexy.compile('(bc|b)'))
         #dfa(regexy.compile('a(f|g)b(f|g)'))
@@ -643,3 +645,7 @@ class RegexyTest(unittest.TestCase):
         #dfa(regexy.compile('(?:ab|c*(?:d|e)(?:f|g)*)'))
         #dfa(regexy.compile('a*'))
         #dfa(regexy.compile('(?:rf*|r)'))
+
+        # proof of NFA of O(n) states -> DFA of O(2^n) states
+        #pattern = '(0|1)*1(0|1)(0|1)(0|1)(0|1)(0|1)(0|1)(0|1)(0|1)'
+        #dfa(regexy.compile(pattern))
