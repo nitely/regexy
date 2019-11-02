@@ -38,12 +38,17 @@ class Node:
     :ivar out: refs to next nodes
     :private:
     """
+    _id = 0
+
     def __init__(self, *, char: str, out: Sequence['Node']=()) -> None:
         self.char = char
         self.out = out
+        Node._id += 1
+        self.id = Node._id
 
     def __repr__(self) -> str:
-        return repr((self.char, self.out))
+        return str(self.id)
+        #return repr((self.char, self.out))
 
 
 class CharNode(Node):

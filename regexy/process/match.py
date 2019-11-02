@@ -18,6 +18,7 @@ from ..shared.nodes import (
     CharNode,
     GroupNode,
     Node,
+    SkipNode,
     AssertionNode)
 from ..shared import exceptions
 from ..shared.collections import StatesSet
@@ -262,6 +263,116 @@ class DFA:
         return str([s.char for s in self.states])
 
 
+def _e_closure(state, visited):
+    if state in visited:
+        return
+    visited.add(state)
+
+    if isinstance(state, CharNode):
+        yield state
+        return
+    if state is EOF:
+        yield state
+        return
+
+    # e-transition
+    for s in state.out:
+        yield from _e_closure(s, visited)
+
+
+# Return set of all states reachable from
+# the given states in zero or more e-transitions
+def e_closure(states):
+    result = set()
+    for state in states:
+        for s in state.out:
+            result.update(_e_closure(s, set()))
+    return frozenset(result)
+
+
+# extract the alphabet from the NFA graph
+def create_alphabet(nfa):
+    result = set()
+    visited = set()
+    def _make(state):
+        for s in state.out:
+            if s in visited:
+                continue
+            visited.add(s)
+            if isinstance(s, CharNode):
+                result.add(s.char)
+            if isinstance(s, type(EOF)):
+                result.add('EOF')
+            _make(s)
+    _make(n0(nfa))
+    result = list(sorted(result))
+    print('alphabet=%r' % result)
+    return result
+
+
+# applies the nfa’s transition function to each element of q
+def delta(states, symbol):
+    result = set()
+    for state in states:
+        #for s in state.out:
+            #if s.char == symbol:
+            #    result.add(s)
+        if state.char == symbol:
+            result.add(state)
+    return result
+
+
+def printq(q):
+    result = []
+    for qi in q:
+        result.append(qi.char)
+    print(result)
+
+
+def n0(nfa):
+    # fake start node
+    return SkipNode(out=[nfa.state])
+
+
+def dfa2(nfa):
+    alphabet = create_alphabet(nfa)
+    T = {}
+    # q = e_closure({nfa.state})
+    # skip e_closure for now, we dont have a initial dummy node
+    #q = frozenset({nfa.state})
+    q = e_closure({n0(nfa)})
+    print('q0', q)
+    states = [q]
+    result = [q]
+    i = 0
+    while states:
+        q = states.pop(0)
+        i += 1
+        for c in alphabet:
+            t = e_closure(delta(q, c))
+            print('q%r' % i, t, 'char', c)
+            printq(t)
+            T[q, c] = t
+            if t not in result:
+                result.append(t)
+                states.append(t)
+    print("Table")
+    print(T)
+    return T, result[0]
+
+
+def matchDFA(text, dfa):
+    T, q = dfa
+    for c in text:
+        t = T[q, c]
+        q = t
+    print(q)
+    return EOF in q
+
+# print(matchDFA('aaaa', dfa2(regexy.compile('a*'))))
+
+
+# Don't use this. See dfa2
 def dfa(nfa):
     states = list(_dfa_states(nfa.state, visited=set()))
     first = DFA(states)
