@@ -14,7 +14,8 @@ from typing import (
     Set)
 
 from ..shared.nodes import (
-    EOF,
+    EOFNode,
+    OpNode,
     CharNode,
     GroupNode,
     Node,
@@ -71,7 +72,7 @@ def _get_match(states: List[Tuple[Node, Capture]]) -> Capture:
     :private:
     """
     for s, captured in states:
-        if s == EOF:
+        if isinstance(s, EOFNode):
             return captured
 
     raise exceptions.MatchError('No match')
@@ -103,8 +104,8 @@ def _next_states(
 
     visited.add(state)
 
-    if state is EOF:
-        yield EOF, captured
+    if isinstance(state, EOFNode):
+        yield state, captured
         return
 
     if isinstance(state, CharNode):
@@ -236,8 +237,8 @@ def _dfa_states(state, visited):
 
     visited.add(state)
 
-    if state is EOF:
-        yield EOF
+    if isinstance(state, EOFNode):
+        yield state
         return
 
     if isinstance(state, CharNode):
@@ -263,21 +264,31 @@ class DFA:
         return str([s.char for s in self.states])
 
 
-def _e_closure(state, visited):
+def _e_closure(state, visited, capt=None):
     if state in visited:
         return
     visited.add(state)
 
+    if isinstance(state, GroupNode):
+        print('group==========')
+        print(state._id)
+        capt = state
     if isinstance(state, CharNode):
+        state.capt = getattr(state, 'capt', [])
+        if capt:
+            state.capt.append(capt)
         yield state
         return
-    if state is EOF:
+    if isinstance(state, EOFNode):
+        state.capt = getattr(state, 'capt', [])
+        if capt:
+            state.capt.append(capt)
         yield state
         return
 
     # e-transition
     for s in state.out:
-        yield from _e_closure(s, visited)
+        yield from _e_closure(s, visited, capt)
 
 
 # Return set of all states reachable from
@@ -301,8 +312,8 @@ def create_alphabet(nfa):
             visited.add(s)
             if isinstance(s, CharNode):
                 result.add(s.char)
-            if isinstance(s, type(EOF)):
-                result.add('EOF')
+            if isinstance(s, EOFNode):
+                result.add(s.char)
             _make(s)
     _make(n0(nfa))
     result = list(sorted(result))
@@ -361,13 +372,54 @@ def dfa2(nfa):
     return T, result[0]
 
 
-def matchDFA(text, dfa):
+# Return sub-NFA of transitions and captures
+def submatch_nfa(nfa):
+    visited = set()
+    def _submatch(node):
+        nonlocal visited
+        if node in visited:
+            assert isinstance(node, OpNode)
+            return node
+        visited.add(node)
+        out = []
+        for n in node.out:
+            out.append(_submatch(n))
+        assert len(out) <= 2
+        if isinstance(node, EOFNode):
+            assert not out
+            return node.copy()
+        if isinstance(node, GroupNode):
+            assert len(out) > 0
+            group = node.copy()
+            group.out = out
+            return group
+        if isinstance(node, OpNode):
+            assert len(out) > 0
+            op = node.copy()
+            op.out = out
+            return op
+        assert len(out) == 1
+        return out[0]
+    return _submatch(nfa.state)
+
+
+class CaptNode:
+    def __init__(self, parent, index):
+        self.parent = parent
+        self.index = index
+
+
+def matchDFA(text, dfa, sub_nfa):
     T, q = dfa
-    for c in text:
+    for i, c in enumerate(text):
         t = T[q, c]
+        if any(s.capt for s in q):
+            print('capt', i, q)
         q = t
-    print(q)
-    return EOF in q
+    if any(s.capt for s in q):
+        print('capt', len(text), q)
+    print('end', q)
+    return any(isinstance(n, EOFNode) for n in q)
 
 # print(matchDFA('aaaa', dfa2(regexy.compile('a*'))))
 
@@ -388,8 +440,8 @@ def dfa(nfa):
         visited.append(dfa_)
 
         for s in dfa_.states:
-            if s is EOF:
-                dfa_.next[s.char] = EOF
+            if isinstance(s, EOFNode):
+                dfa_.next[s.char] = s
                 continue
 
             sts = list(_nxt_dfa_states(s, visited=set()))
@@ -418,7 +470,7 @@ def dfa(nfa):
     for d in table:
         row = []
         for st in d.states:
-            row.append((st.char, st is EOF or table.index(d.next[st.char])))
+            row.append((st.char, isinstance(st, EOFNode) or table.index(d.next[st.char])))
         new_table.append(row)
     print('table')
     for row in new_table:

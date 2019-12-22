@@ -21,7 +21,7 @@ __all__ = [
     'SymbolNode',
     'OpNode',
     'GroupNode',
-    'EOF',
+    'EOFNode',
     'SetNode',
     'ShorthandNode',
     'AlphaNumNode',
@@ -40,15 +40,18 @@ class Node:
     """
     _id = 0
 
-    def __init__(self, *, char: str, out: Sequence['Node']=()) -> None:
+    def __init__(self, *, char: str, out: Sequence['Node']=(), id=None) -> None:
         self.char = char
         self.out = out
         Node._id += 1
-        self.id = Node._id
+        self.id = id or Node._id
 
     def __repr__(self) -> str:
         return str(self.id)
-        #return repr((self.char, self.out))
+        #return repr((self.id, self.out))
+
+    def copy(self):
+        raise NotImplementedError
 
 
 class CharNode(Node):
@@ -91,6 +94,13 @@ class OpNode(SymbolNode):
         super().__init__(**kwargs)
         self.is_greedy = is_greedy
 
+    def copy(self):
+        return OpNode(
+            char=self.char,
+            id=self.id,
+            out=self.out,
+            is_greedy=self.is_greedy)
+
 
 class GroupNode(SymbolNode):
     """
@@ -116,6 +126,17 @@ class GroupNode(SymbolNode):
         self.is_capturing = is_capturing
         self.flags = flags or ()
         self.name = name
+
+    def copy(self):
+        return GroupNode(
+            char=self.char,
+            id=self.id,
+            out=self.out,
+            index=self.index,
+            is_repeated=self.is_repeated,
+            is_capturing=self.is_capturing,
+            flags=self.flags,
+            name=self.name)
 
 
 class AssertionNode(SymbolNode):
@@ -385,6 +406,13 @@ class EOFNode(Node):
     :private:
     """
 
+    def __init__(self, **kwargs) -> None:
+        super().__init__(char='EOF', **kwargs)
 
-EOF = EOFNode(out=[], char='EOF')
+    def copy(self):
+        return EOFNode(
+            id=self.id,
+            out=self.out)
+
+#EOF = EOFNode(out=[], char='EOF')
 
