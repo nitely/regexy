@@ -378,7 +378,7 @@ def submatch_nfa(nfa):
     def _submatch(node):
         nonlocal visited
         if node in visited:
-            assert isinstance(node, OpNode)
+            assert isinstance(node, (OpNode, GroupNode)), node.__class__
             return node
         visited.add(node)
         out = []
@@ -398,28 +398,89 @@ def submatch_nfa(nfa):
             op = node.copy()
             op.out = out
             return op
+        # XXX remove
+        if isinstance(node, CharNode):
+            c = node.copy()
+            c.out = out
+            return c
         assert len(out) == 1
         return out[0]
     return _submatch(nfa.state)
 
 
 class CaptNode:
-    def __init__(self, parent, index):
+    def __init__(self, parent, index, node):
         self.parent = parent
         self.index = index
+        self.node = node
+
+    def __repr__(self):
+        return '(%r, %r)' % (self.parent, self.index)
+
+
+def matchSubNFA(tags, states, char_idx):
+    visited = set()
+    result = []
+    def _matchSubNFA(node, capt):
+        if node in visited:
+            return
+        visited.add(node)
+        #if node.id not in tags: #and isinstance(node, (GroupNode, EOFNode)):
+        #    result.append((node, capt))
+        #    return
+        if isinstance(node, CharNode):  # XXX remove
+            if node.id in tags:
+                assert len(node.out) == 1
+                result.append((node.out[0], capt))
+            return
+        if isinstance(node, GroupNode):
+            capt = CaptNode(parent=capt, index=char_idx, node=node)
+        for n in node.out:
+            _matchSubNFA(n, capt)
+    for n, c in states:
+        _matchSubNFA(n, c)
+    return result
+
+
+def extract_submatches(capt):
+    import collections
+    result = collections.defaultdict(lambda: [[]])
+    while capt:
+        if len(result[capt.node.index][-1]) == 2:
+            result[capt.node.index].append([])
+        if result[capt.node.index][-1]:
+            a = capt.index
+            b = result[capt.node.index][-1][0]
+            assert len(result[capt.node.index][-1]) == 1
+            result[capt.node.index][-1] = (a, b-1)
+        else:
+            result[capt.node.index][-1] = (capt.index,)
+        capt = capt.parent
+    return dict(result)
 
 
 def matchDFA(text, dfa, sub_nfa):
     T, q = dfa
+    sub_state = [(sub_nfa, None)]
     for i, c in enumerate(text):
         t = T[q, c]
         if any(s.capt for s in q):
             print('capt', i, q)
+        tags = set(
+            c.id
+            for s in q
+            for c in s.capt or [])
+        tags = tags | set(s.id for s in q)
+        sub_state = matchSubNFA(tags, sub_state, i)
         q = t
     if any(s.capt for s in q):
         print('capt', len(text), q)
     print('end', q)
-    return any(isinstance(n, EOFNode) for n in q)
+    print('submatch', extract_submatches(_get_match(sub_state)))
+    return (
+        any(isinstance(n, EOFNode) for n in q),
+        extract_submatches(_get_match(sub_state)))
+
 
 # print(matchDFA('aaaa', dfa2(regexy.compile('a*'))))
 

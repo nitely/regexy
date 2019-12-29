@@ -75,6 +75,13 @@ class CharNode(Node):
             char=self.char,
             compare=lambda c: c in (a, b))
 
+    def copy(self):
+        return CharNode(
+            char=self.char,
+            id=self.id,
+            out=self.out,
+            is_captured=self.is_captured)
+
 
 class SymbolNode(Node):
     """
