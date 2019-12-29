@@ -276,6 +276,7 @@ def _e_closure(state, visited, capt=None):
     if isinstance(state, CharNode):
         state.capt = getattr(state, 'capt', [])
         if capt:
+            print('added tag to', state.char, capt.index, capt.char)
             state.capt.append(capt)
         yield state
         return
@@ -378,7 +379,7 @@ def submatch_nfa(nfa):
     def _submatch(node):
         nonlocal visited
         if node in visited:
-            assert isinstance(node, (OpNode, GroupNode)), node.__class__
+            # OpNode, GroupNode re('a(b|c)d'), CharNode re('a?b')
             return node
         visited.add(node)
         out = []
@@ -469,13 +470,19 @@ def matchDFA(text, dfa, sub_nfa):
         tags = set(
             c.id
             for s in q
-            for c in s.capt or [])
-        tags = tags | set(s.id for s in q)
+            for c in s.capt or []
+            if s.char == c)
+        # XXX we need to pass the state that matched c,
+        #     this is a expensive hack to make it work for now
+        tags = tags | set(s.id for s in q if s.char == c)
         sub_state = matchSubNFA(tags, sub_state, i)
         q = t
     if any(s.capt for s in q):
         print('capt', len(text), q)
+    #tags = set(s.id for s in q)
+    #sub_state = matchSubNFA(tags, sub_state, -1)
     print('end', q)
+    print(sub_state)
     print('submatch', extract_submatches(_get_match(sub_state)))
     return (
         any(isinstance(n, EOFNode) for n in q),
