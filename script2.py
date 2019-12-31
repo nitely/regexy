@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import regexy
-from regexy.process.match import dfa2, matchDFA, submatch_nfa
+from regexy.process.match import dfa2, matchDFA, submatch_nfa, branch_tracking_nfa
 
 def match(text, re):
-    nfa = regexy.compile(re)
+    nfa = regexy.compile(re).state
+    nfa = branch_tracking_nfa(nfa)
     return matchDFA(text, dfa2(nfa), submatch_nfa(nfa))
 
 
@@ -35,6 +36,11 @@ assert match('aaabbbaaac', '(a*|b*)*c') == (True, {0: [(6, 8), (3, 5), (0, 2)]})
 assert match('ababc', '(a(b))*c') == (True, {0: [(2, 3), (0, 1)], 1: [(3, 3), (1, 1)]})
 assert match('aaanasdnasdx', '((a)*n?(asd)*)*x') == (True, {0: [(7, 10), (0, 6)], 2: [(8, 10), (4, 6)], 1: [(2, 2), (1, 1), (0, 0)]})
 assert match('aaanasdnasdx', '((a)*n?(asd))*x') == (True, {0: [(7, 10), (0, 6)], 2: [(8, 10), (4, 6)], 1: [(2, 2), (1, 1), (0, 0)]})
+
+assert match('abde', '((ab)c)|((ab)d)e') == (True, {2: [(0, 2)], 3: [(0, 1)]})
+assert match('aaaa', '(a*)a') == (True, {0: [(0, 2)]})
+assert match('aaaax', '(a*)(a*)x') == (True, {1: [(4, 3)], 0: [(0, 3)]})
+assert match('aaaax', '(a*?)(a*?)x') == (True, {1: [(0, 3)], 0: [(0, -1)]})
 
 
 # change Node.__repr__ to debug this

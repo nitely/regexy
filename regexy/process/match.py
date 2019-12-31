@@ -264,6 +264,50 @@ class DFA:
         return str([s.char for s in self.states])
 
 
+# populate branch number, experiment
+def branch_tracking_nfa(nfa):
+    visited = set()
+    branch = 100000000
+    def _track(node):
+        nonlocal visited, branch
+        if node in visited:
+            # OpNode, GroupNode re('a(b|c)d'), CharNode re('a?b')
+            return node
+        visited.add(node)
+        node.branch = branch
+        out = []
+        for n in node.out:
+            if len(node.out) > 1:
+                branch += 1
+            out.append(_track(n))
+        assert len(out) <= 2
+        if isinstance(node, EOFNode):
+            assert not out
+            n = node.copy()
+            n.branch = node.branch
+            return n
+        if isinstance(node, GroupNode):
+            assert len(out) > 0
+            group = node.copy()
+            group.out = out
+            group.branch = node.branch
+            return group
+        if isinstance(node, OpNode):
+            assert len(out) > 0
+            op = node.copy()
+            op.out = out
+            op.branch = node.branch
+            return op
+        if isinstance(node, CharNode):
+            c = node.copy()
+            c.out = out
+            c.branch = node.branch
+            return c
+        assert len(out) == 1
+        return out[0]
+    return _track(nfa)
+
+
 def _e_closure(state, visited, capt=None):
     if state in visited:
         return
@@ -343,7 +387,7 @@ def printq(q):
 
 def n0(nfa):
     # fake start node
-    return SkipNode(out=[nfa.state])
+    return SkipNode(out=[nfa])
 
 
 def dfa2(nfa):
@@ -388,25 +432,30 @@ def submatch_nfa(nfa):
         assert len(out) <= 2
         if isinstance(node, EOFNode):
             assert not out
-            return node.copy()
+            eof = node.copy()
+            eof.branch = node.branch
+            return eof
         if isinstance(node, GroupNode):
             assert len(out) > 0
             group = node.copy()
             group.out = out
+            group.branch = node.branch
             return group
         if isinstance(node, OpNode):
             assert len(out) > 0
             op = node.copy()
             op.out = out
+            op.branch = node.branch
             return op
         # XXX remove
         if isinstance(node, CharNode):
             c = node.copy()
             c.out = out
+            c.branch = node.branch
             return c
         assert len(out) == 1
         return out[0]
-    return _submatch(nfa.state)
+    return _submatch(nfa)
 
 
 class CaptNode:
@@ -430,7 +479,7 @@ def matchSubNFA(tags, states, char_idx):
         #    result.append((node, capt))
         #    return
         if isinstance(node, CharNode):  # XXX remove
-            if node.id in tags:
+            if node.branch in tags:
                 assert len(node.out) == 1
                 result.append((node.out[0], capt))
             return
@@ -468,13 +517,13 @@ def matchDFA(text, dfa, sub_nfa):
         if any(s.capt for s in q):
             print('capt', i, q)
         tags = set(
-            c.id
+            cc.id
             for s in q
-            for c in s.capt or []
+            for cc in s.capt or []
             if s.char == c)
         # XXX we need to pass the state that matched c,
         #     this is a expensive hack to make it work for now
-        tags = tags | set(s.id for s in q if s.char == c)
+        tags = tags | set(s.branch for s in q if s.char == c)
         sub_state = matchSubNFA(tags, sub_state, i)
         q = t
     if any(s.capt for s in q):
