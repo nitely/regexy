@@ -45,6 +45,9 @@ class Node:
         self.out = out
         Node._id += 1
         self.id = id or Node._id
+        self.tags = []
+        self.branch = -1
+        self.idx = -1
 
     def __repr__(self) -> str:
         return str(self.id)

@@ -264,70 +264,14 @@ class DFA:
         return str([s.char for s in self.states])
 
 
-# populate branch number, experiment
-def branch_tracking_nfa(nfa):
-    visited = set()
-    branch = 100000000
-    def _track(node):
-        nonlocal visited, branch
-        if node in visited:
-            # OpNode, GroupNode re('a(b|c)d'), CharNode re('a?b')
-            return node
-        visited.add(node)
-        node.branch = branch
-        out = []
-        for n in node.out:
-            if len(node.out) > 1:
-                branch += 1
-            out.append(_track(n))
-        assert len(out) <= 2
-        if isinstance(node, EOFNode):
-            assert not out
-            n = node.copy()
-            n.branch = node.branch
-            return n
-        if isinstance(node, GroupNode):
-            assert len(out) > 0
-            group = node.copy()
-            group.out = out
-            group.branch = node.branch
-            return group
-        if isinstance(node, OpNode):
-            assert len(out) > 0
-            op = node.copy()
-            op.out = out
-            op.branch = node.branch
-            return op
-        if isinstance(node, CharNode):
-            c = node.copy()
-            c.out = out
-            c.branch = node.branch
-            return c
-        assert len(out) == 1
-        return out[0]
-    return _track(nfa)
-
-
 def _e_closure(state, visited, capt=None):
     if state in visited:
         return
     visited.add(state)
-
-    if isinstance(state, GroupNode):
-        print('group==========')
-        print(state._id)
-        capt = state
     if isinstance(state, CharNode):
-        state.capt = getattr(state, 'capt', [])
-        if capt:
-            print('added tag to', state.char, capt.index, capt.char)
-            state.capt.append(capt)
         yield state
         return
     if isinstance(state, EOFNode):
-        state.capt = getattr(state, 'capt', [])
-        if capt:
-            state.capt.append(capt)
         yield state
         return
 
@@ -393,9 +337,6 @@ def n0(nfa):
 def dfa2(nfa):
     alphabet = create_alphabet(nfa)
     T = {}
-    # q = e_closure({nfa.state})
-    # skip e_closure for now, we dont have a initial dummy node
-    #q = frozenset({nfa.state})
     q = e_closure({n0(nfa)})
     print('q0', q)
     states = [q]
@@ -417,45 +358,199 @@ def dfa2(nfa):
     return T, result[0]
 
 
-# Return sub-NFA of transitions and captures
-def submatch_nfa(nfa):
-    visited = set()
-    def _submatch(node):
-        nonlocal visited
-        if node in visited:
-            # OpNode, GroupNode re('a(b|c)d'), CharNode re('a?b')
-            return node
-        visited.add(node)
+def min_nfa(nfa):
+    def _e_resolve(node):
+        if isinstance(node, (EOFNode, CharNode)):
+            return [node]
         out = []
         for n in node.out:
-            out.append(_submatch(n))
-        assert len(out) <= 2
-        if isinstance(node, EOFNode):
-            assert not out
-            eof = node.copy()
-            eof.branch = node.branch
-            return eof
+            out.extend(_e_resolve(n))
         if isinstance(node, GroupNode):
-            assert len(out) > 0
-            group = node.copy()
-            group.out = out
-            group.branch = node.branch
-            return group
-        if isinstance(node, OpNode):
-            assert len(out) > 0
-            op = node.copy()
-            op.out = out
-            op.branch = node.branch
-            return op
-        # XXX remove
+            for n in out:
+                print('n', n.char, n.tags)
+                n.tags.append(node.copy())
+        return out
+    visited = set()
+    def _min_nfa(node):
+        nonlocal visited
+        if node.id in visited:
+            if isinstance(node, (EOFNode, CharNode)):
+                return [node]
+            else:
+                return node.out
+        visited.add(node.id)
+        out = []
+        for n in node.out:
+            out.extend(_e_resolve(n))
+        node.out = out
+        for n in out:
+            _min_nfa(n)
+    out = _e_resolve(nfa)
+    for n in out:
+        _min_nfa(n)
+    return out
+
+
+# NFA without e-transitions,
+# groups are added into next states node.tags
+def min_nfa2(nfa):
+    visited = set()
+    def _min_nfa(node):
+        nonlocal visited
+        if node.id in visited:
+            return [node]
+        visited.add(node.id)
+        out = []
+        for n in node.out:
+            out.extend(_min_nfa(n))
+        if isinstance(node, (EOFNode, CharNode)):
+            n = node.copy()
+            n.tags = n.tags
+            n.out = out
+            return [n]
+        if isinstance(node, GroupNode):
+            for n in out:
+                print('n', n.char, n.tags)
+                n.tags.append(node.copy())
+            return out
+        return out
+    return _min_nfa(nfa)
+
+
+# populate branch number, experiment
+def branch_tracking_nfa(nfa):
+    visited = set()
+    branch = 100000000
+    def _track(node):
+        nonlocal visited, branch
+        if node in visited:
+            return
+        visited.add(node)
+        node.branch = branch
+        for n in node.out:
+            if len(node.out) > 1:
+                branch += 1
+            _track(n)
+    for n in nfa:
+        _track(n)
+
+
+ok_transitions = None
+branch_nodes = None
+branch_capt = None
+branch_end = None
+
+# transitions and captures
+def submatch_nfa(nfa):
+    global ok_transitions, branch_nodes, branch_capt, branch_end
+    import collections
+    visited = set()
+    ok_transitions = collections.defaultdict(lambda: list())
+    branch_nodes = collections.defaultdict(lambda: 0)
+    branch_capt = collections.defaultdict(lambda: list())
+    branch_end = collections.defaultdict(lambda: False)
+    def _submatch(node):
+        nonlocal visited
+        if node.id in visited:
+            return
+        visited.add(node.id)
+        for t in node.tags:
+            if isinstance(t, GroupNode):
+                branch_capt[node.branch, branch_nodes[node.branch]].append(t)
         if isinstance(node, CharNode):
-            c = node.copy()
-            c.out = out
-            c.branch = node.branch
-            return c
-        assert len(out) == 1
-        return out[0]
-    return _submatch(nfa)
+            print('branch count in', node.char)
+            branch_nodes[node.branch] += 1
+        for n in node.out:
+            if len(node.out) >= 2:
+                ok_transitions[node.branch].append(n.branch)
+        if any(isinstance(n, EOFNode) for n in node.out):
+            branch_end[node.branch] = True
+        for n in node.out:
+            _submatch(n)
+    for n in nfa:
+        _submatch(n)
+
+
+first_branches = None
+
+
+def again_nfa(nfa):
+    global ok_transitions, branch_nodes, branch_capt, branch_end, first_branches
+    import collections
+    ok_transitions = collections.defaultdict(lambda: list())
+    branch_nodes = collections.defaultdict(lambda: 0)
+    branch_capt = collections.defaultdict(lambda: list())
+    branch_end = collections.defaultdict(lambda: False)
+    def _again(node, visited, g=None):
+        if node.id in visited:
+            return
+        visited.add(node.id)
+        g = g or []
+        if isinstance(node, (EOFNode, CharNode)):
+            node.tags.extend(g)
+            yield node
+            return
+        if isinstance(node, GroupNode):
+            g.append(node)
+        for n in node.out:
+            yield from _again(n, visited, g)
+    def _again_next(nodes):
+        for n in nodes.out:
+            yield from _again(n, set())
+    branch = 0
+    first_branches = []
+    q = list(_again(nfa, set()))
+    for n in q:
+        n.idx = 0
+        if len(q) > 1:
+            branch += 1
+            n.branch = branch
+        for t in n.tags:
+            if isinstance(t, GroupNode):
+                branch_capt[n.branch, branch_nodes[n.branch]].append(t)
+        if isinstance(n, CharNode):
+            branch_nodes[n.branch] += 1
+        if isinstance(n, EOFNode):
+            branch_end[n.branch] = True
+        first_branches.append(n.branch)
+    queue = q
+    seen = set(q)
+    while queue:
+        n = queue.pop(0)
+        Q = list(_again_next(n))
+        for n2 in Q:
+            if n2 in seen:
+                if len(Q) > 1:
+                    ok_transitions[n.branch].append(n2.branch)
+                for t in n2.tags:
+                    if isinstance(t, GroupNode):
+                        assert n2.idx >= 0
+                        if t not in branch_capt[n2.branch, n2.idx]:
+                            branch_capt[n2.branch, n2.idx].append(t)
+                continue
+            seen.add(n2)
+            queue.append(n2)
+            if len(Q) > 1:
+                branch += 1
+                n2.branch = branch
+                n2.idx = 0
+                ok_transitions[n.branch].append(n2.branch)
+            else:
+                n2.branch = n.branch
+                n2.idx = n.idx + 1
+            for t in n2.tags:
+                if isinstance(t, GroupNode):
+                    assert n2.idx >= 0
+                    branch_capt[n2.branch, n2.idx].append(t)
+            if isinstance(n2, CharNode):
+                branch_nodes[n2.branch] += 1
+            if isinstance(n2, EOFNode):
+                branch_end[n2.branch] = True
+
+
+def good_nfa(nfa):
+    again_nfa(nfa)
+    return nfa
 
 
 class CaptNode:
@@ -468,27 +563,37 @@ class CaptNode:
         return '(%r, %r)' % (self.parent, self.index)
 
 
-def matchSubNFA(tags, states, char_idx):
-    visited = set()
+def first_state(sub_nfa):
+    global first_branches
+    return [(branch, None, 0) for branch in first_branches]
+
+
+def betterSubMatcher(tags, states, char_idx):
+    global ok_transitions, branch_nodes, branch_capt
     result = []
-    def _matchSubNFA(node, capt):
-        if node in visited:
-            return
-        visited.add(node)
-        #if node.id not in tags: #and isinstance(node, (GroupNode, EOFNode)):
-        #    result.append((node, capt))
-        #    return
-        if isinstance(node, CharNode):  # XXX remove
-            if node.branch in tags:
-                assert len(node.out) == 1
-                result.append((node.out[0], capt))
-            return
-        if isinstance(node, GroupNode):
-            capt = CaptNode(parent=capt, index=char_idx, node=node)
-        for n in node.out:
-            _matchSubNFA(n, capt)
-    for n, c in states:
-        _matchSubNFA(n, c)
+    for branch, capt, count in states:
+        if branch not in tags:
+            print('branch not in tags', branch, tags)
+            continue
+        print('branch matched', branch)
+        #assert branch_nodes[branch] > 0
+        for capt_node in branch_capt[branch, count]:
+            print('captured', branch_capt[branch, count], branch, count)
+            capt = CaptNode(parent=capt, index=char_idx, node=capt_node)
+        count += 1
+        if count == branch_nodes[branch]:
+            if branch_end[branch]:
+                print('end reached', branch)
+                result.append((EOFNode(), capt, 0))
+            for b in ok_transitions[branch]:
+                print('transition from', branch, 'to', b)
+                result.append((b, capt, 0))
+        elif count > branch_nodes[branch]:
+            print('dead end', branch, type(branch))
+            continue
+        else:
+            result.append((branch, capt, count))
+    assert result
     return result
 
 
@@ -510,28 +615,31 @@ def extract_submatches(capt):
 
 
 def matchDFA(text, dfa, sub_nfa):
+    print('ok_transitions', ok_transitions)
+    print('branch_nodes', branch_nodes)
+    print('branch_end', branch_end)
+    print('branch_capt', branch_capt)
     T, q = dfa
-    sub_state = [(sub_nfa, None)]
+    sub_state = first_state(sub_nfa)
     for i, c in enumerate(text):
+        print('matching char', c)
         t = T[q, c]
-        if any(s.capt for s in q):
-            print('capt', i, q)
-        tags = set(
-            cc.id
-            for s in q
-            for cc in s.capt or []
-            if s.char == c)
+        #if any(s.capt for s in q):
+        #    print('capt', i, q)
+        #print('groups to match', tags)
         # XXX we need to pass the state that matched c,
         #     this is a expensive hack to make it work for now
-        tags = tags | set(s.branch for s in q if s.char == c)
-        sub_state = matchSubNFA(tags, sub_state, i)
+        tags = set(s.branch for s in q if s.char == c)
+        print('branches to match', tags)
+        sub_state = betterSubMatcher(tags, sub_state, i)
         q = t
-    if any(s.capt for s in q):
-        print('capt', len(text), q)
+    #if any(s.capt for s in q):
+    #    print('capt', len(text), q)
     #tags = set(s.id for s in q)
     #sub_state = matchSubNFA(tags, sub_state, -1)
     print('end', q)
     print(sub_state)
+    sub_state = [(st[0], st[1]) for st in sub_state]
     print('submatch', extract_submatches(_get_match(sub_state)))
     return (
         any(isinstance(n, EOFNode) for n in q),
