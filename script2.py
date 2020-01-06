@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import regexy
-from regexy.process.match import dfa2, matchDFA, good_nfa
+from regexy.process.match import dfa2, matchDFA, e_removal
 
 def match(text, re):
     nfa = regexy.compile(re).state
-    nfa = good_nfa(nfa)
-    return matchDFA(text, dfa2(nfa), nfa)
+    nfa = e_removal(nfa)
+    return matchDFA(text, dfa2(nfa))
 
 
 #print(match('aabcd', '(aa)(bc)d'))
@@ -14,12 +14,16 @@ def match(text, re):
 #print(match('ababc', '(ab)*c'))
 #print(match('ab', '((a))b'))
 
+assert match('aaaax', '(a*)(a*)x') == (True, {1: [(4, 3)], 0: [(0, 3)]})
+
 assert match('aabcd', '(aa)bcd') == (True, {0: [(0, 1)]})
 assert match('aabcde', '(aa)(bc)de') == (True, {1: [(2, 3)], 0: [(0, 1)]})
 assert match('abd', 'a(b|c)d') == (True, {0: [(1, 1)]})
 assert match('abc', '(ab)*c') == (True, {0: [(0, 1)]})
 assert match('ababc', '(ab)*c') == (True, {0: [(2, 3), (0, 1)]})
 assert match('ab', '((a))b') == (True, {0: [(0, 0)], 1: [(0, 0)]})
+
+assert match('c', '((ab)*)c') == (True, {0: [(0, -1)]})  # probably
 
 
 assert match('aabc', '((a)*b)c') == (True, {0: [(0, 2)], 1: [(1, 1), (0, 0)]})
