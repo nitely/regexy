@@ -424,5 +424,4 @@ class EOFNode(Node):
             id=self.id,
             out=self.out)
 
-#EOF = EOFNode(out=[], char='EOF')
-
+EOF = EOFNode(out=[])

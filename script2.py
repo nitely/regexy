@@ -14,8 +14,6 @@ def match(text, re):
 #print(match('ababc', '(ab)*c'))
 #print(match('ab', '((a))b'))
 
-assert match('aaaax', '(a*)(a*)x') == (True, {1: [(4, 3)], 0: [(0, 3)]})
-
 assert match('aabcd', '(aa)bcd') == (True, {0: [(0, 1)]})
 assert match('aabcde', '(aa)(bc)de') == (True, {1: [(2, 3)], 0: [(0, 1)]})
 assert match('abd', 'a(b|c)d') == (True, {0: [(1, 1)]})
@@ -46,6 +44,7 @@ assert match('abde', '((ab)c)|((ab)d)e') == (True, {2: [(0, 2)], 3: [(0, 1)]})
 assert match('aaaa', '(a*)a') == (True, {0: [(0, 2)]})
 assert match('aaaax', '(a*)(a*)x') == (True, {1: [(4, 3)], 0: [(0, 3)]})
 assert match('aaaax', '(a*?)(a*?)x') == (True, {1: [(0, 3)], 0: [(0, -1)]})
+assert match('aaaax', '(a)*(a)x') == (True, {1: [(3, 3)], 0: [(2, 2), (1, 1), (0, 0)]})
 
 
 # change Node.__repr__ to debug this

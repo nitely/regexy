@@ -72,7 +72,7 @@ def rep_range_no_end(node, state):
     new_state = dup(state)
     zero_or_more = nodes.OpNode(
         char=Symbols.ZERO_OR_MORE,
-        out=[new_state, nodes.EOFNode()])
+        out=[new_state, nodes.EOF])
 
     if node.is_greedy:
         zero_or_more.out.reverse()
@@ -86,7 +86,7 @@ def rep_range_with_end(node, state):
 
     zero_or_one = nodes.OpNode(
         char=Symbols.ZERO_OR_ONE,
-        out=[dup(state), nodes.EOFNode()])
+        out=[dup(state), nodes.EOF])
 
     if zero_or_one.is_greedy:
         zero_or_one.out.reverse()
@@ -96,7 +96,7 @@ def rep_range_with_end(node, state):
     for _ in range(node.start, node.end - 1):
         zero_or_one_ = nodes.OpNode(
             char=Symbols.ZERO_OR_ONE,
-            out=[dup(state), nodes.EOFNode()])
+            out=[dup(state), nodes.EOF])
 
         if zero_or_one_.is_greedy:
             zero_or_one_.out.reverse()
@@ -173,7 +173,7 @@ def nfa(expression: Iterator[nodes.Node]) -> nodes.Node:
                 nodes.CharNode,
                 nodes.AssertionNode,
                 nodes.SkipNode)):
-            node.out = [nodes.EOFNode()]
+            node.out = [nodes.EOF]
             states.append(node)
             continue
 
@@ -193,7 +193,7 @@ def nfa(expression: Iterator[nodes.Node]) -> nodes.Node:
 
         if node.char == Symbols.ZERO_OR_MORE:
             state = states.pop()
-            node.out = [state, nodes.EOFNode()]
+            node.out = [state, nodes.EOF]
 
             if node.is_greedy:
                 node.out.reverse()
@@ -204,7 +204,7 @@ def nfa(expression: Iterator[nodes.Node]) -> nodes.Node:
 
         if node.char == Symbols.ONE_OR_MORE:
             state = states.pop()
-            node.out = [state, nodes.EOFNode()]
+            node.out = [state, nodes.EOF]
 
             if node.is_greedy:
                 node.out.reverse()
@@ -215,7 +215,7 @@ def nfa(expression: Iterator[nodes.Node]) -> nodes.Node:
 
         if node.char == Symbols.ZERO_OR_ONE:
             state = states.pop()
-            node.out = [state, nodes.EOFNode()]
+            node.out = [state, nodes.EOF]
 
             if node.is_greedy:
                 node.out.reverse()
@@ -232,7 +232,7 @@ def nfa(expression: Iterator[nodes.Node]) -> nodes.Node:
 
         if node.char == Symbols.GROUP_END:
             state = states.pop()
-            node.out = [nodes.EOFNode()]
+            node.out = [nodes.EOF]
             combine(state, node)
             states.append(state)
             continue
@@ -247,7 +247,7 @@ def nfa(expression: Iterator[nodes.Node]) -> nodes.Node:
                 first = rep_range_fixed(node, state)
 
             if node.start == node.end:
-                states.append(first or nodes.SkipNode(out=[nodes.EOFNode()]))
+                states.append(first or nodes.SkipNode(out=[nodes.EOF]))
                 continue
 
             if node.end is None:

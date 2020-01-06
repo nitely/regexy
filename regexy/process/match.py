@@ -87,32 +87,31 @@ def e_removal(nfa):
     global z_transitions, all_transitions
     z_transitions = collections.defaultdict(lambda: list())
     all_transitions = set()
-    def _e_closure_plus(state, prev_state, visited, capts=None):
-        capts = capts or []
+    def _te_closure(state, prev_state, visited, capts=()):
         if state in visited:
             return
         visited.add(state)
         if isinstance(state, GroupNode):
-            capts.append(state)
+            capts += (state,)  # copy
         if isinstance(state, (CharNode, EOFNode)):
             if capts:
-                z_transitions[prev_state, state].extend(capts)
+                z_transitions[prev_state, state] = capts
             all_transitions.add((prev_state, state))
             yield state
             return
         for s in state.out:
-            yield from _e_closure_plus(s, prev_state, visited, list(capts))
-    def e_closure_plus(state):
+            yield from _te_closure(s, prev_state, visited, capts)
+    def te_closure(state):
         for s in state.out:
-            yield from _e_closure_plus(s, state, set())
-    def e_closure0(state):
-        yield from _e_closure_plus(state, None, set())
+            yield from _te_closure(s, state, set())
+    def te_closure0(state):
+        yield from _te_closure(state, None, set())
     visited = set()
-    q0 = list(e_closure0(nfa))
+    q0 = list(te_closure0(nfa))
     queue = list(q0)
     while queue:
         q = queue.pop(0)
-        Q = list(e_closure_plus(q))
+        Q = list(te_closure(q))
         for n in Q:
             if n in visited:
                 continue
@@ -140,7 +139,7 @@ class OrderedFrozenSet:
         return self.b.__hash__()
 
     def __eq__(self, other):
-        return other.__hash__() == self.__hash__()
+        return other.b == self.b
 
 
 def _e_closure(state, visited, capt=None):
@@ -191,14 +190,11 @@ def create_alphabet(nfa):
 
 # applies the nfa’s transition function to each element of q
 def delta(states, symbol):
-    result = set()
+    result = list()
     for state in states:
-        #for s in state.out:
-            #if s.char == symbol:
-            #    result.add(s)
         if state.char == symbol:
-            result.add(state)
-    return result
+            result.append(state)
+    return OrderedFrozenSet(result)
 
 
 def printq(q):
