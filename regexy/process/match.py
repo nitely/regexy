@@ -86,86 +86,51 @@ all_transitions = None
 def e_removal(nfa):
     global z_transitions, all_transitions
     z_transitions = collections.defaultdict(lambda: list())
-    all_transitions = set()
-    def _te_closure(state, prev_state, visited, capts=()):
+    all_transitions = collections.defaultdict(lambda: list())
+    def _te_closure(state, visited, capts=()):
         if state in visited:
             return
         visited.add(state)
         if isinstance(state, GroupNode):
             capts += (state,)  # copy
         if isinstance(state, (CharNode, EOFNode)):
-            if capts:
-                z_transitions[prev_state, state] = capts
-            all_transitions.add((prev_state, state))
-            yield state
+            yield state, capts
             return
         for s in state.out:
-            yield from _te_closure(s, prev_state, visited, capts)
+            yield from _te_closure(s, visited, capts)
     def te_closure(state):
         for s in state.out:
-            yield from _te_closure(s, state, set())
-    def te_closure0(state):
-        yield from _te_closure(state, None, set())
-    visited = set()
-    q0 = list(te_closure0(nfa))
-    queue = list(q0)
-    while queue:
-        q = queue.pop(0)
-        Q = list(te_closure(q))
-        for n in Q:
-            if n in visited:
-                continue
-            visited.add(n)
-            queue.append(n)
-        q.out = Q
+            yield from _te_closure(s, set())
+    def n0(nfa):
+        return SkipNode(out=[nfa])
+    q0 = []
+    for qb, c in te_closure(n0(nfa)):
+        q0.append(qb)
+        z_transitions[None, qb] = c
+        all_transitions[None].append(qb)
+    Qw = collections.deque(q0)
+    Q = set(q0)
+    while Qw:
+        qa = Qw.pop()
+        q = []
+        for qb, c in te_closure(qa):
+            q.append(qb)
+            z_transitions[qa, qb] = c
+            all_transitions[qa].append(qb)
+            if qb not in Q:
+                Q.add(qb)
+                Qw.append(qb)
+        qa.out = q
     return q0
 
 
-class OrderedFrozenSet:
-    def __init__(self, x):
-        self.a = []
-        b = set()
-        for xx in x:
-            if xx in b:
-                continue
-            self.a.append(xx)
-            b.add(xx)
-        self.b = frozenset(x)
-
-    def __iter__(self):
-        return self.a.__iter__()
-
-    def __hash__(self):
-        return self.b.__hash__()
-
-    def __eq__(self, other):
-        return other.b == self.b
-
-
-def _e_closure(state, visited, capt=None):
-    if state in visited:
-        return
-    visited.add(state)
-    if isinstance(state, CharNode):
-        yield state
-        return
-    if isinstance(state, EOFNode):
-        yield state
-        return
-
-    # e-transition
-    for s in state.out:
-        yield from _e_closure(s, visited, capt)
-
-
 # Return set of all states reachable from
-# the given states in zero or more e-transitions
-def e_closure(states):
-    result = []
+# the given states
+def closure(states):
+    result = set()
     for state in states:
-        for s in state.out:
-            result.extend(_e_closure(s, set()))
-    return OrderedFrozenSet(result)
+        result.update(state.out)
+    return frozenset(result)
 
 
 # extract the alphabet from the NFA graph
@@ -177,10 +142,7 @@ def create_alphabet(nfa):
             if s in visited:
                 continue
             visited.add(s)
-            if isinstance(s, CharNode):
-                result.add(s.char)
-            if isinstance(s, EOFNode):
-                result.add(s.char)
+            result.add(s.char)
             _make(s)
     _make(n0(nfa))
     result = list(sorted(result))
@@ -190,11 +152,11 @@ def create_alphabet(nfa):
 
 # applies the nfa’s transition function to each element of q
 def delta(states, symbol):
-    result = list()
+    result = set()
     for state in states:
         if state.char == symbol:
-            result.append(state)
-    return OrderedFrozenSet(result)
+            result.add(state)
+    return frozenset(result)
 
 
 def printq(q):
@@ -212,25 +174,25 @@ def n0(nfa):
 def dfa2(nfa):
     alphabet = create_alphabet(nfa)
     T = {}
-    q = e_closure({n0(nfa)})
-    print('q0', q)
-    states = [q]
-    result = [q]
+    q0 = closure({n0(nfa)})
+    print('q0', q0)
+    Qw = collections.deque([q0])
+    Q = {q0}
     i = 0
-    while states:
-        q = states.pop(0)
+    while Qw:
+        q = Qw.pop()
         i += 1
         for c in alphabet:
-            t = e_closure(delta(q, c))
+            t = closure(delta(q, c))
             print('q%r' % i, t, 'char', c)
             printq(t)
             T[q, c] = t
-            if t not in result:
-                result.append(t)
-                states.append(t)
+            if t not in Q:
+                Q.add(t)
+                Qw.appendleft(t)
     print("Table")
     print(T)
-    return T, result[0]
+    return T, q0
 
 
 class CaptNode:
@@ -260,16 +222,17 @@ def extract_submatches(capt):
     return dict(result)
 
 
-def submatch(sub_matches, states, c, i):
+# O(m)
+def submatch(sub_matches, states, i):
     result = []
     for n, ct in sub_matches:
-        for mn in states:
-            if (n, mn) not in all_transitions:
+        for nt in all_transitions[n]:
+            if nt not in states:
                 continue
             ctx = ct
-            for cn in z_transitions[n, mn]:
+            for cn in z_transitions[n, nt]:
                 ctx = CaptNode(parent=ctx, index=i, node=cn)
-            result.append((mn, ctx))
+            result.append((nt, ctx))
     return result
 
 
@@ -283,13 +246,13 @@ def matchDFA(text, dfa):
         t = T[q, c]
         # XXX we need to pass the state that matched c,
         #     this is a expensive hack to make it work for now
-        m_states = [s for s in q if s.char == c]
+        m_states = set(s for s in q if s.char == c)
         print('matched nodes', m_states)
-        sub_matched = submatch(sub_matched, m_states, c, i)
+        sub_matched = submatch(sub_matched, m_states, i)
         q = t
     print('end', q)
     m_states = [s for s in q if isinstance(s, EOFNode)]
-    sub_matched = submatch(sub_matched, m_states, c, i+1)
+    sub_matched = submatch(sub_matched, m_states, i+1)
     print(sub_matched)
     print('submatch', extract_submatches(_get_match(sub_matched)))
     return (
