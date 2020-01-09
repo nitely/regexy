@@ -15,6 +15,7 @@ from typing import (
     Set)
 
 from ..shared.nodes import (
+    EOF,
     EOFNode,
     OpNode,
     CharNode,
@@ -85,8 +86,8 @@ all_transitions = None
 
 def e_removal(nfa):
     global z_transitions, all_transitions
-    z_transitions = collections.defaultdict(lambda: list())
-    all_transitions = collections.defaultdict(lambda: list())
+    z_transitions = collections.defaultdict(list)
+    all_transitions = collections.defaultdict(list)
     def _te_closure(state, visited, capts=()):
         if state in visited:
             return
@@ -183,10 +184,11 @@ def dfa2(nfa):
         q = Qw.pop()
         i += 1
         for c in alphabet:
-            t = closure(delta(q, c))
+            s = delta(q, c)
+            t = closure(s)
             print('q%r' % i, t, 'char', c)
             printq(t)
-            T[q, c] = t
+            T[q, c] = (t, s)
             if t not in Q:
                 Q.add(t)
                 Qw.appendleft(t)
@@ -212,9 +214,9 @@ def extract_submatches(capt):
         if len(result[capt.node.index][-1]) == 2:
             result[capt.node.index].append([])
         if result[capt.node.index][-1]:
+            assert len(result[capt.node.index][-1]) == 1
             a = capt.index
             b = result[capt.node.index][-1][0]
-            assert len(result[capt.node.index][-1]) == 1
             result[capt.node.index][-1] = (a, b-1)
         else:
             result[capt.node.index][-1] = (capt.index,)
@@ -243,18 +245,15 @@ def matchDFA(text, dfa):
     sub_matched = [(None, None)]  # last_node, capture
     for i, c in enumerate(text):
         print('matching char', c)
-        t = T[q, c]
-        # XXX we need to pass the state that matched c,
-        #     this is a expensive hack to make it work for now
-        m_states = set(s for s in q if s.char == c)
-        print('matched nodes', m_states)
-        sub_matched = submatch(sub_matched, m_states, i)
+        t, s = T[q, c]
+        #s = set(s for s in q if s.char == c)
+        print('matched nodes', s)
+        sub_matched = submatch(sub_matched, s, i)
         q = t
     print('end', q)
-    m_states = [s for s in q if isinstance(s, EOFNode)]
-    sub_matched = submatch(sub_matched, m_states, i+1)
+    sub_matched = submatch(sub_matched, [EOF], i+1)
     print(sub_matched)
     print('submatch', extract_submatches(_get_match(sub_matched)))
     return (
-        any(isinstance(n, EOFNode) for n in q),
+        len(sub_matched) > 0,
         extract_submatches(_get_match(sub_matched)))
