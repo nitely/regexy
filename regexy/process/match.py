@@ -80,7 +80,7 @@ def _get_match(states: List[Tuple[Node, Capture]]) -> Capture:
     raise exceptions.MatchError('No match')
 
 
-z_transitions = None  # g_transitions
+z_transitions = None
 all_transitions = None
 
 
@@ -146,8 +146,7 @@ def create_alphabet(nfa):
             result.add(s.char)
             _make(s)
     _make(n0(nfa))
-    result = list(sorted(result))
-    print('alphabet=%r' % result)
+    print('alphabet=%r' % list(sorted(result)))
     return result
 
 
@@ -188,7 +187,8 @@ def dfa2(nfa):
             t = closure(s)
             print('q%r' % i, t, 'char', c)
             printq(t)
-            T[q, c] = (t, s)
+            if t:
+                T[q, c] = (t, s)
             if t not in Q:
                 Q.add(t)
                 Qw.appendleft(t)
@@ -243,6 +243,7 @@ def matchDFA(text, dfa):
     print('z_transitions', dict(z_transitions))
     T, q = dfa
     sub_matched = [(None, None)]  # last_node, capture
+    i = 0
     for i, c in enumerate(text):
         print('matching char', c)
         t, s = T[q, c]
